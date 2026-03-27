@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InvoiceFlow — Facturas</title>
+<script src="https://unpkg.com/htmx.org@1.9.12"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg:        #0f1117;
+    --surface:   #181c27;
+    --surface2:  #1f2436;
+    --border:    #2a3047;
+    --accent:    #4f8ef7;
+    --accent2:   #7c5cfc;
+    --green:     #22c97a;
+    --yellow:    #f5c842;
+    --red:       #f25f5c;
+    --text:      #e8ecf4;
+    --muted:     #6b7a99;
+    --radius:    12px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+  }
+
+  /* ── Layout ── */
+  .shell { display: flex; min-height: 100vh; }
+
+  .sidebar {
+    width: 220px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 28px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    flex-shrink: 0;
+  }
+
+  .logo {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 28px;
+    letter-spacing: -0.3px;
+  }
+  .logo span { color: var(--text); }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: 8px;
+    color: var(--muted);
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.15s;
+    text-decoration: none;
+    font-size: 13px;
+  }
+  .nav-item:hover, .nav-item.active {
+    background: var(--surface2);
+    color: var(--text);
+  }
+  .nav-item.active { color: var(--accent); }
+
+  .main { flex: 1; padding: 32px 36px; overflow-y: auto; }
+
+  .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
+  }
+  .page-title { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+  .page-sub   { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+  /* ── Upload zone ── */
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 36px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 28px;
+    position: relative;
+  }
+  .upload-zone:hover, .upload-zone.drag {
+    border-color: var(--accent);
+    background: rgba(79,142,247,0.05);
+  }
+  .upload-zone input[type=file] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .upload-icon { font-size: 32px; margin-bottom: 10px; }
+  .upload-text { color: var(--muted); font-size: 13px; }
+  .upload-text strong { color: var(--accent); }
+
+  /* ── Stats cards ── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+  .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; }
+  .stat-value { font-size: 28px; font-weight: 700; font-family: 'JetBrains Mono', monospace; letter-spacing: -1px; }
+  .stat-value.green  { color: var(--green); }
+  .stat-value.accent { color: var(--accent); }
+  .stat-value.yellow { color: var(--yellow); }
+  .stat-value.red    { color: var(--red); }
+  .stat-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+  /* ── Table ── */
+  .table-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .table-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .table-title { font-weight: 600; font-size: 14px; }
+
+  .filter-bar { display: flex; gap: 8px; }
+  .filter-btn {
+    padding: 5px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.15s;
+  }
+  .filter-btn:hover, .filter-btn.active {
+    background: var(--surface2);
+    color: var(--text);
+    border-color: var(--accent);
+  }
+
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    text-align: left;
+    padding: 10px 16px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+  }
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+  }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--surface2); }
+  td { padding: 12px 16px; font-size: 13px; }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+  .badge-done    { background: rgba(34,201,122,0.15); color: var(--green); }
+  .badge-error   { background: rgba(242,95,92,0.15);  color: var(--red); }
+  .badge-pending { background: rgba(245,200,66,0.15); color: var(--yellow); }
+  .badge-processing { background: rgba(79,142,247,0.15); color: var(--accent); }
+
+  .amount {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .amount-positive { color: var(--green); }
+  .amount-neutral  { color: var(--text); }
+
+  .confidence-bar {
+    width: 48px;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+  .confidence-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--accent);
+  }
+
+  .btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn-primary   { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #3d7de8; }
+  .btn-ghost     { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+  .btn-ghost:hover { color: var(--text); border-color: var(--accent); }
+
+  .empty-state {
+    padding: 60px 20px;
+    text-align: center;
+    color: var(--muted);
+  }
+  .empty-icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-text { font-size: 15px; font-weight: 500; color: var(--text); margin-bottom: 6px; }
+  .empty-sub  { font-size: 13px; }
+
+  /* ── Toast ── */
+  #toast-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 999;
+  }
+  .toast {
+    padding: 12px 18px;
+    border-radius: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    font-size: 13px;
+    animation: slideIn 0.2s ease;
+    max-width: 320px;
+  }
+  .toast.success { border-left: 3px solid var(--green); }
+  .toast.error   { border-left: 3px solid var(--red); }
+  @keyframes slideIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+
+  /* ── Progress ── */
+  .progress-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(4px);
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+  .progress-overlay.active { display: flex; }
+  .progress-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 36px 48px;
+    text-align: center;
+    min-width: 280px;
+  }
+  .spinner {
+    width: 40px; height: 40px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+
+  /* ── Email inbound panel ── */
+  .ingest-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .ingest-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .ingest-card.highlight { border-color: var(--accent); }
+  .ingest-icon { font-size: 28px; flex-shrink: 0; }
+  .ingest-label { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .ingest-value {
+    font-size: 14px;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--accent);
+    word-break: break-all;
+  }
+  .ingest-value.inactive { color: var(--muted); font-style: italic; font-family: 'Inter', sans-serif; font-weight: 400; }
+  .copy-btn {
+    margin-left: auto;
+    flex-shrink: 0;
+    padding: 5px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 11px;
+    transition: all .15s;
+  }
+  .copy-btn:hover { color: var(--text); border-color: var(--accent); }
+  @media (max-width: 768px) { .ingest-grid { grid-template-columns: 1fr; } }
+
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .main { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="logo">⚡ Invoice<span>Flow</span></div>
+    <a class="nav-item active" href="/">📄 Facturas</a>
+    <a class="nav-item" href="/stats">📊 Estadísticas</a>
+    <a class="nav-item" href="/config">⚙️ Configuración</a>
+  </nav>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Facturas</div>
+        <div class="page-sub">{{ total }} facturas · {{ processed }} procesadas</div>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-ghost" onclick="openShareModal()">
+          🔗 Compartir con gestor
+        </button>
+        {% if sheets_configured %}
+        <button class="btn btn-ghost" hx-post="/api/export-all" hx-swap="none"
+                hx-on::after-request="showToast('Exportado a Google Sheets ✓', 'success')">
+          📊 Exportar todo
+        </button>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Upload zone -->
+    <div class="upload-zone" id="dropZone">
+      <input type="file" id="fileInput" multiple accept=".pdf,.jpg,.jpeg,.png,.webp"
+             onchange="uploadFiles(this.files)">
+      <div class="upload-icon">📂</div>
+      <div class="upload-text">
+        <strong>Haz clic o arrastra</strong> tus facturas aquí<br>
+        PDF, JPG, PNG — hasta 20 archivos a la vez
+      </div>
+    </div>
+
+
+    <!-- Email inbound panel -->
+    <div class="ingest-grid">
+      <div class="ingest-card {% if inbound_email %}highlight{% endif %}">
+        <div class="ingest-icon">📨</div>
+        <div style="flex:1;min-width:0;">
+          <div class="ingest-label">Reenvía facturas por email a</div>
+          {% if inbound_email %}
+          <div class="ingest-value">{{ inbound_email }}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:3px;">
+            Los adjuntos PDF e imagen se procesan automáticamente
+          </div>
+          {% else %}
+          <div class="ingest-value inactive">No configurado</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:3px;">
+            Añade <code style="background:var(--surface2);padding:1px 5px;border-radius:4px;">INBOUND_EMAIL_ADDRESS</code> en tu .env
+          </div>
+          {% endif %}
+        </div>
+        {% if inbound_email %}
+        <button class="copy-btn" onclick="copyEmail()">Copiar</button>
+        {% endif %}
+      </div>
+
+      <div class="ingest-card">
+        <div class="ingest-icon">📁</div>
+        <div style="flex:1;min-width:0;">
+          <div class="ingest-label">Carpeta vigilada</div>
+          {% if watch_folder %}
+          <div class="ingest-value" style="font-size:12px;">{{ watch_folder }}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:3px;">
+            Cualquier archivo aquí se procesa automáticamente
+          </div>
+          {% else %}
+          <div class="ingest-value inactive">No configurada</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:3px;">
+            Añade <code style="background:var(--surface2);padding:1px 5px;border-radius:4px;">WATCH_FOLDER</code> en tu .env
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Total procesadas</div>
+        <div class="stat-value accent">{{ stats.done }}</div>
+        <div class="stat-sub">de {{ stats.total }} subidas</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Gasto total (IVA incl.)</div>
+        <div class="stat-value green">{{ "%.2f"|format(stats.total_amount_eur) }} €</div>
+        <div class="stat-sub">facturas recibidas</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Con errores</div>
+        <div class="stat-value {% if stats.errors > 0 %}red{% else %}green{% endif %}">
+          {{ stats.errors }}
+        </div>
+        <div class="stat-sub">requieren revisión</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Categoría top</div>
+        <div class="stat-value yellow" style="font-size:16px;margin-top:4px;">
+          {{ top_category or "—" }}
+        </div>
+        <div class="stat-sub">mayor gasto</div>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-card">
+      <div class="table-header">
+        <div class="table-title">Todas las facturas</div>
+        <div class="filter-bar">
+          <button class="filter-btn active" onclick="filterTable('all', this)">Todas</button>
+          <button class="filter-btn" onclick="filterTable('done', this)">✅ OK</button>
+          <button class="filter-btn" onclick="filterTable('error', this)">❌ Error</button>
+          <button class="filter-btn" onclick="filterTable('pending', this)">⏳ Pendientes</button>
+        </div>
+      </div>
+
+      {% if invoices %}
+      <table>
+        <thead>
+          <tr>
+            <th>Archivo</th>
+            <th>Proveedor</th>
+            <th>Fecha</th>
+            <th>Concepto</th>
+            <th>Categoría</th>
+            <th>Total</th>
+            <th>IVA</th>
+            <th>Confianza</th>
+            <th>Estado</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="invoiceTable">
+          {% for inv in invoices %}
+          <tr data-status="{{ inv.status }}">
+            <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
+                title="{{ inv.filename }}">
+              📄 {{ inv.filename }}
+            </td>
+            <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+              {{ inv.vendor or "—" }}
+            </td>
+            <td style="white-space:nowrap;color:var(--muted);">
+              {{ inv.invoice_date or "—" }}
+            </td>
+            <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);"
+                title="{{ inv.concept or '' }}">
+              {{ inv.concept or "—" }}
+            </td>
+            <td>
+              {% if inv.category %}
+              <span style="background:var(--surface2);padding:2px 8px;border-radius:6px;font-size:11px;">
+                {{ inv.category }}
+              </span>
+              {% else %}—{% endif %}
+            </td>
+            <td>
+              {% if inv.total %}
+              <span class="amount {% if inv.invoice_type == 'issued' %}amount-positive{% else %}amount-neutral{% endif %}">
+                {{ "%.2f"|format(inv.total) }} {{ inv.currency }}
+              </span>
+              {% else %}—{% endif %}
+            </td>
+            <td style="color:var(--muted);">
+              {% if inv.tax_rate %}{{ "%.0f"|format(inv.tax_rate * 100) }}%{% else %}—{% endif %}
+            </td>
+            <td>
+              {% if inv.status == 'done' %}
+              <div class="confidence-bar">
+                <div class="confidence-fill" style="width:{{ (inv.confidence * 100)|int }}%"></div>
+              </div>
+              <span style="font-size:11px;color:var(--muted);">{{ "%.0f"|format(inv.confidence * 100) }}%</span>
+              {% else %}—{% endif %}
+            </td>
+            <td>
+              <span class="badge badge-{{ inv.status }}">
+                {% if inv.status == 'done' %}✅ OK
+                {% elif inv.status == 'error' %}❌ Error
+                {% elif inv.status == 'processing' %}⏳ Procesando
+                {% else %}🕐 Pendiente{% endif %}
+              </span>
+            </td>
+            <td>
+              <button class="btn btn-ghost" style="padding:4px 10px;font-size:11px;"
+                      onclick="showDetail('{{ inv.id }}')">Ver</button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-icon">📭</div>
+        <div class="empty-text">Sin facturas todavía</div>
+        <div class="empty-sub">Sube un PDF o imagen para empezar</div>
+      </div>
+      {% endif %}
+    </div>
+  </main>
+</div>
+
+<!-- Progress overlay -->
+<div class="progress-overlay" id="progressOverlay">
+  <div class="progress-box">
+    <div class="spinner"></div>
+    <div style="font-weight:600;margin-bottom:6px;" id="progressTitle">Procesando factura…</div>
+    <div style="color:var(--muted);font-size:13px;" id="progressSub">Claude está extrayendo los datos</div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div id="toast-container"></div>
+
+<script>
+// ── Upload ──────────────────────────────────────────────────────────────────
+async function uploadFiles(files) {
+  if (!files.length) return;
+
+  showOverlay(`Procesando ${files.length} factura(s)…`, 'Claude está extrayendo los datos');
+
+  let ok = 0, errors = 0;
+  for (const file of files) {
+    const fd = new FormData();
+    fd.append('file', file);
+    try {
+      const res = await fetch('/api/upload', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.status === 'done' || data.status === 'processing') ok++;
+      else errors++;
+    } catch {
+      errors++;
+    }
+  }
+
+  hideOverlay();
+  if (ok > 0)     showToast(`${ok} factura(s) procesada(s) ✓`, 'success');
+  if (errors > 0) showToast(`${errors} error(s) — revisa la tabla`, 'error');
+  setTimeout(() => location.reload(), 1200);
+}
+
+// ── Drag & Drop ─────────────────────────────────────────────────────────────
+const zone = document.getElementById('dropZone');
+zone.addEventListener('dragover',  e => { e.preventDefault(); zone.classList.add('drag'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
+zone.addEventListener('drop', e => {
+  e.preventDefault();
+  zone.classList.remove('drag');
+  uploadFiles(e.dataTransfer.files);
+});
+
+// ── Filter ───────────────────────────────────────────────────────────────────
+function filterTable(status, btn) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('#invoiceTable tr').forEach(row => {
+    row.style.display = (status === 'all' || row.dataset.status === status) ? '' : 'none';
+  });
+}
+
+// ── Detail modal (simple — just reload for now) ──────────────────────────────
+async function showDetail(id) {
+  const res = await fetch(`/api/invoice/${id}`);
+  const inv = await res.json();
+  const lines = Object.entries(inv)
+    .filter(([k,v]) => v !== null && v !== '' && !['id','filepath'].includes(k))
+    .map(([k,v]) => `<tr><td style="color:var(--muted);padding:6px 10px;font-size:12px;">${k}</td>
+                         <td style="padding:6px 10px;font-size:13px;">${v}</td></tr>`)
+    .join('');
+  const html = `<table style="width:100%">${lines}</table>`;
+
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:200;display:flex;align-items:center;justify-content:center;';
+  overlay.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;max-width:560px;width:90%;max-height:80vh;overflow-y:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <strong>📄 ${inv.filename}</strong>
+        <button onclick="this.closest('div[style]').remove()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;">✕</button>
+      </div>
+      ${html}
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+}
+
+// ── Overlay ──────────────────────────────────────────────────────────────────
+function showOverlay(title, sub) {
+  document.getElementById('progressTitle').textContent = title;
+  document.getElementById('progressSub').textContent   = sub;
+  document.getElementById('progressOverlay').classList.add('active');
+}
+function hideOverlay() {
+  document.getElementById('progressOverlay').classList.remove('active');
+}
+
+// ── Copy email ──────────────────────────────────────────────────────────────
+function copyEmail() {
+  const addr = document.querySelector('.ingest-value')?.textContent?.trim();
+  if (!addr) return;
+  navigator.clipboard.writeText(addr).then(() => showToast('Email copiado al portapapeles ✓', 'success'));
+}
+
+// ── Toast ────────────────────────────────────────────────────────────────────
+function showToast(msg, type='success') {
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+</script>
+
+<!-- ── Share / Gestor modal ───────────────────────────────────────────────── -->
+<div id="shareOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);
+     backdrop-filter:blur(4px);z-index:200;align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;
+              padding:28px;max-width:480px;width:90%;max-height:85vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <div>
+        <div style="font-weight:700;font-size:16px;">🔗 Compartir con tu gestor</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:3px;">
+          El gestor ve tus facturas sin necesidad de cuenta
+        </div>
+      </div>
+      <button onclick="closeShareModal()"
+              style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px;">✕</button>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:14px;">
+
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <label style="font-size:12px;color:var(--muted);font-weight:500;">Nombre del enlace</label>
+        <input id="share-label" type="text" placeholder="ej: Q1 2025 para María García"
+               style="padding:10px 12px;border-radius:9px;background:var(--surface2);
+                      border:1px solid var(--border);color:var(--text);font-size:13px;
+                      font-family:inherit;outline:none;width:100%;">
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <label style="font-size:12px;color:var(--muted);font-weight:500;">Desde</label>
+          <input id="share-from" type="date"
+                 style="padding:10px 12px;border-radius:9px;background:var(--surface2);
+                        border:1px solid var(--border);color:var(--text);font-size:13px;
+                        font-family:inherit;outline:none;width:100%;color-scheme:dark;">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <label style="font-size:12px;color:var(--muted);font-weight:500;">Hasta</label>
+          <input id="share-to" type="date"
+                 style="padding:10px 12px;border-radius:9px;background:var(--surface2);
+                        border:1px solid var(--border);color:var(--text);font-size:13px;
+                        font-family:inherit;outline:none;width:100%;color-scheme:dark;">
+        </div>
+      </div>
+
+      <div style="display:flex;gap:20px;">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
+          <input type="checkbox" id="share-amounts" checked
+                 style="width:16px;height:16px;accent-color:var(--accent);">
+          Mostrar importes
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
+          <input type="checkbox" id="share-tickets"
+                 style="width:16px;height:16px;accent-color:var(--accent);">
+          Incluir tickets
+        </label>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <label style="font-size:12px;color:var(--muted);font-weight:500;">Caducidad (opcional)</label>
+        <select id="share-expires"
+                style="padding:10px 12px;border-radius:9px;background:var(--surface2);
+                       border:1px solid var(--border);color:var(--text);font-size:13px;
+                       font-family:inherit;outline:none;">
+          <option value="">Sin caducidad</option>
+          <option value="7">7 días</option>
+          <option value="30">30 días</option>
+          <option value="90">90 días</option>
+        </select>
+      </div>
+
+      <button onclick="createShareLink()"
+              style="padding:13px;border-radius:10px;background:var(--accent);color:#fff;
+                     font-weight:700;font-size:14px;border:none;cursor:pointer;
+                     font-family:inherit;transition:background .15s;"
+              onmouseover="this.style.background='#3d7de8'"
+              onmouseout="this.style.background='var(--accent)'">
+        Generar enlace
+      </button>
+    </div>
+
+    <!-- Generated link -->
+    <div id="share-result" style="display:none;margin-top:16px;
+         background:var(--surface2);border:1px solid var(--border);
+         border-radius:10px;padding:16px;">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:500;">
+        ✅ Enlace generado — compártelo con tu gestor
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input id="share-url" type="text" readonly
+               style="flex:1;padding:9px 12px;border-radius:8px;
+                      background:var(--surface);border:1px solid var(--border);
+                      color:var(--accent);font-size:12px;font-family:monospace;outline:none;">
+        <button onclick="copyShareUrl()"
+                style="padding:9px 14px;border-radius:8px;border:1px solid var(--border);
+                       background:var(--surface);color:var(--muted);cursor:pointer;
+                       font-size:12px;font-family:inherit;white-space:nowrap;
+                       transition:all .15s;"
+                onmouseover="this.style.color='var(--text)'"
+                onmouseout="this.style.color='var(--muted)'">
+          Copiar
+        </button>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:8px;">
+        El gestor puede ver las facturas y descargar CSV sin crear cuenta.
+      </div>
+    </div>
+
+    <!-- Existing links -->
+    <div id="existing-shares" style="margin-top:20px;"></div>
+  </div>
+</div>
+
+<script>
+// ── Share modal ───────────────────────────────────────────────────────────────
+function openShareModal() {
+  const overlay = document.getElementById('shareOverlay');
+  overlay.style.display = 'flex';
+  loadExistingShares();
+  // Default: current quarter
+  const now   = new Date();
+  const q     = Math.floor(now.getMonth() / 3);
+  const qFrom = new Date(now.getFullYear(), q * 3, 1);
+  const qTo   = new Date(now.getFullYear(), q * 3 + 3, 0);
+  document.getElementById('share-from').value = qFrom.toISOString().slice(0,10);
+  document.getElementById('share-to').value   = qTo.toISOString().slice(0,10);
+}
+
+function closeShareModal() {
+  document.getElementById('shareOverlay').style.display = 'none';
+  document.getElementById('share-result').style.display = 'none';
+}
+
+document.getElementById('shareOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('shareOverlay')) closeShareModal();
+});
+
+async function createShareLink() {
+  const body = {
+    label:           document.getElementById('share-label').value.trim(),
+    date_from:       document.getElementById('share-from').value,
+    date_to:         document.getElementById('share-to').value,
+    include_amounts: document.getElementById('share-amounts').checked,
+    include_tickets: document.getElementById('share-tickets').checked,
+    expires_days:    document.getElementById('share-expires').value
+                       ? parseInt(document.getElementById('share-expires').value)
+                       : null,
+  };
+
+  const res  = await fetch('/api/shares', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (!res.ok) { showToast(data.detail || 'Error', 'error'); return; }
+
+  document.getElementById('share-url').value    = data.url;
+  document.getElementById('share-result').style.display = 'block';
+  showToast('Enlace generado ✓', 'success');
+  loadExistingShares();
+}
+
+function copyShareUrl() {
+  const url = document.getElementById('share-url').value;
+  navigator.clipboard.writeText(url).then(() => showToast('URL copiada ✓', 'success'));
+}
+
+async function loadExistingShares() {
+  const res    = await fetch('/api/shares');
+  const shares = await res.json();
+  if (!shares.length) return;
+
+  const container = document.getElementById('existing-shares');
+  container.innerHTML = `
+    <div style="font-size:12px;color:var(--muted);font-weight:500;
+                text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;">
+      Links activos
+    </div>
+    ${shares.map(s => `
+      <div style="display:flex;align-items:center;justify-content:space-between;
+                  padding:10px 12px;border-radius:8px;background:var(--surface2);
+                  border:1px solid var(--border);margin-bottom:6px;gap:8px;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+            ${s.label || 'Sin nombre'}
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">
+            ${s.date_from || '—'} → ${s.date_to || '—'} · ${s.access_count} acceso(s)
+            ${s.expired ? ' · <span style="color:var(--red)">Expirado</span>' : ''}
+          </div>
+        </div>
+        <button onclick="navigator.clipboard.writeText('${s.url}').then(()=>showToast('Copiado ✓','success'))"
+                style="padding:5px 10px;border-radius:6px;border:1px solid var(--border);
+                       background:transparent;color:var(--muted);cursor:pointer;font-size:11px;
+                       font-family:inherit;flex-shrink:0;">
+          Copiar
+        </button>
+        <button onclick="deleteShare('${s.token}')"
+                style="padding:5px 10px;border-radius:6px;border:1px solid var(--border);
+                       background:transparent;color:var(--red);cursor:pointer;font-size:11px;
+                       font-family:inherit;flex-shrink:0;">
+          Eliminar
+        </button>
+      </div>
+    `).join('')}`;
+}
+
+async function deleteShare(token) {
+  if (!confirm('¿Eliminar este enlace? El gestor perderá el acceso.')) return;
+  await fetch(`/api/shares/${token}`, { method: 'DELETE' });
+  showToast('Enlace eliminado', 'success');
+  loadExistingShares();
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,8 @@
+[phases.setup]
+nixPkgs = ["python311", "libmagic"]
+
+[phases.install]
+cmds = ["pip install -e ."]
+
+[start]
+cmd = "uvicorn invoiceflow.main:app --host 0.0.0.0 --port $PORT"

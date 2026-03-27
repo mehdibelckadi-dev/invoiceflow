@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InvoiceFlow — IVA Trimestral</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #0a0b0f;
+    --s1:      #13151e;
+    --s2:      #1a1d28;
+    --border:  #252836;
+    --gold:    #e8c97a;
+    --green:   #22c97a;
+    --red:     #f25f5c;
+    --blue:    #4f8ef7;
+    --text:    #e8ecf4;
+    --muted:   #6b7a99;
+    --smoke:   #b0b8cc;
+    --r:       13px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg); color: var(--text);
+    font-size: 14px; -webkit-font-smoothing: antialiased;
+  }
+  mono { font-family: 'DM Mono', monospace; }
+
+  /* ── Nav ── */
+  .nav {
+    background: var(--s1); border-bottom: 1px solid var(--border);
+    padding: 0 32px; height: 60px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 50;
+  }
+  .nav-logo {
+    font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700;
+    color: var(--gold); display: flex; align-items: center; gap: 7px;
+    text-decoration: none;
+  }
+  .nav-links { display: flex; gap: 4px; }
+  .nav-link {
+    padding: 7px 14px; border-radius: 8px;
+    font-size: 13px; color: var(--muted); text-decoration: none;
+    transition: all .15s; font-weight: 500;
+  }
+  .nav-link:hover { background: var(--s2); color: var(--text); }
+  .nav-link.active { background: var(--s2); color: var(--gold); }
+
+  /* ── Layout ── */
+  .main { max-width: 1080px; margin: 0 auto; padding: 32px 24px; }
+
+  /* ── Page header ── */
+  .page-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    margin-bottom: 32px; flex-wrap: wrap; gap: 16px;
+  }
+  .page-title {
+    font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 800;
+    letter-spacing: -0.8px; line-height: 1.1;
+  }
+  .page-sub { font-size: 13px; color: var(--muted); margin-top: 5px; }
+  .year-selector {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .year-btn {
+    padding: 8px 16px; border-radius: 9px;
+    background: var(--s1); border: 1px solid var(--border);
+    color: var(--text); font-size: 14px; font-weight: 600;
+    font-family: 'Syne', sans-serif; cursor: pointer; transition: all .15s;
+  }
+  .year-btn:hover { border-color: var(--gold); }
+  .year-display {
+    font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800;
+    min-width: 60px; text-align: center;
+  }
+
+  /* ── Deadline alert ── */
+  .deadline-alert {
+    border-radius: var(--r); padding: 16px 20px;
+    display: flex; align-items: center; gap: 14px;
+    margin-bottom: 28px; border: 1px solid;
+  }
+  .deadline-alert.urgent {
+    background: rgba(242,95,92,0.06); border-color: rgba(242,95,92,0.25);
+  }
+  .deadline-alert.soon {
+    background: rgba(232,201,122,0.06); border-color: rgba(232,201,122,0.25);
+  }
+  .deadline-alert.ok {
+    background: rgba(34,201,122,0.06); border-color: rgba(34,201,122,0.2);
+  }
+  .alert-icon { font-size: 22px; flex-shrink: 0; }
+  .alert-title { font-weight: 600; font-size: 14px; }
+  .alert-sub   { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .alert-days  {
+    margin-left: auto; flex-shrink: 0;
+    font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800;
+    text-align: right;
+  }
+  .alert-days span { display: block; font-size: 10px; font-weight: 400; color: var(--muted); }
+
+  /* ── Year summary ── */
+  .year-summary {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 2px; margin-bottom: 28px;
+    background: var(--border); border-radius: var(--r); overflow: hidden;
+  }
+  .ys-card {
+    background: var(--s1); padding: 20px;
+    transition: background .15s; cursor: pointer;
+  }
+  .ys-card:hover { background: var(--s2); }
+  .ys-card.active { background: var(--s2); }
+  .ys-q {
+    font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 12px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .ys-q-badge {
+    font-size: 9px; padding: 2px 7px; border-radius: 4px; font-weight: 700;
+  }
+  .badge-current { background: rgba(232,201,122,.15); color: var(--gold); }
+  .badge-past    { background: rgba(255,255,255,.06); color: var(--muted); }
+  .badge-future  { background: transparent; color: transparent; }
+  .ys-result {
+    font-family: 'DM Mono', monospace;
+    font-size: 22px; font-weight: 500; letter-spacing: -0.5px; line-height: 1;
+    margin-bottom: 4px;
+  }
+  .ys-result.positive { color: var(--red); }
+  .ys-result.negative { color: var(--green); }
+  .ys-result.zero     { color: var(--muted); }
+  .ys-result.empty    { color: var(--border); }
+  .ys-label { font-size: 11px; color: var(--muted); }
+  .ys-count { font-size: 11px; color: var(--muted); margin-top: 10px; }
+
+  /* ── Quarter detail ── */
+  .quarter-detail { display: none; }
+  .quarter-detail.active { display: block; }
+
+  .qd-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 20px; flex-wrap: wrap; gap: 12px;
+  }
+  .qd-title {
+    font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+  .qd-period { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 9px 18px; border-radius: 9px; border: none;
+    font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+    cursor: pointer; text-decoration: none; transition: all .15s;
+  }
+  .btn-gold  { background: var(--gold); color: var(--bg); }
+  .btn-gold:hover { background: #f0d898; }
+  .btn-ghost { background: var(--s1); color: var(--muted); border: 1px solid var(--border); }
+  .btn-ghost:hover { color: var(--text); border-color: var(--gold); }
+
+  /* 303 boxes */
+  .modelo-303 {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 16px; margin-bottom: 20px;
+  }
+  .m303-box {
+    background: var(--s1); border: 1px solid var(--border);
+    border-radius: var(--r); padding: 20px 22px;
+  }
+  .m303-title {
+    font-size: 10px; color: var(--muted); text-transform: uppercase;
+    letter-spacing: 1px; font-weight: 600; margin-bottom: 14px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .m303-type {
+    font-size: 9px; padding: 2px 8px; border-radius: 4px;
+  }
+  .type-repercutido { background: rgba(242,95,92,.12); color: var(--red); }
+  .type-soportado   { background: rgba(34,201,122,.12); color: var(--green); }
+
+  .m303-lines { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+  .m303-line {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 12px; border-radius: 8px;
+    background: var(--s2); font-size: 13px;
+  }
+  .m303-line-rate { color: var(--muted); font-weight: 500; }
+  .m303-line-nums { display: flex; gap: 20px; }
+  .m303-line-base { color: var(--smoke); font-family: 'DM Mono', monospace; font-size: 12px; }
+  .m303-line-quota { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; }
+
+  .m303-total {
+    display: flex; justify-content: space-between; align-items: center;
+    padding-top: 10px; border-top: 1px solid var(--border);
+    font-size: 13px; font-weight: 600;
+  }
+  .m303-total-amount {
+    font-family: 'DM Mono', monospace; font-size: 18px; font-weight: 500;
+  }
+
+  /* Resultado box */
+  .resultado-box {
+    border-radius: var(--r); padding: 24px 28px;
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 20px; flex-wrap: wrap; gap: 16px;
+    border: 1px solid;
+  }
+  .resultado-box.pagar      { background: rgba(242,95,92,.05);  border-color: rgba(242,95,92,.25); }
+  .resultado-box.compensar  { background: rgba(34,201,122,.05); border-color: rgba(34,201,122,.2); }
+  .resultado-box.cero       { background: rgba(255,255,255,.02);border-color: var(--border); }
+
+  .resultado-label {
+    font-size: 12px; color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.8px; font-weight: 600; margin-bottom: 6px;
+  }
+  .resultado-value {
+    font-family: 'Syne', sans-serif; font-size: 36px; font-weight: 800;
+    letter-spacing: -1.5px; line-height: 1;
+  }
+  .resultado-sub { font-size: 12px; color: var(--muted); margin-top: 5px; }
+  .resultado-type {
+    font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700;
+    padding: 8px 20px; border-radius: 999px; border: 1px solid;
+  }
+  .type-pagar     { color: var(--red);   border-color: rgba(242,95,92,.4);   background: rgba(242,95,92,.08); }
+  .type-compensar { color: var(--green); border-color: rgba(34,201,122,.4);  background: rgba(34,201,122,.08); }
+
+  /* Warnings */
+  .warnings-box {
+    background: rgba(232,201,122,.05); border: 1px solid rgba(232,201,122,.2);
+    border-radius: var(--r); padding: 16px 20px; margin-bottom: 20px;
+  }
+  .warnings-title { font-size: 13px; font-weight: 600; color: var(--gold); margin-bottom: 10px; }
+  .warning-item { font-size: 12px; color: var(--smoke); padding: 4px 0; }
+
+  /* Invoice list */
+  .inv-table-card {
+    background: var(--s1); border: 1px solid var(--border);
+    border-radius: var(--r); overflow: hidden; margin-bottom: 20px;
+  }
+  .inv-table-header {
+    padding: 14px 18px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .inv-table-title { font-weight: 600; font-size: 13px; }
+  .inv-count { font-size: 12px; color: var(--muted); }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    text-align: left; padding: 9px 14px;
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.7px;
+    color: var(--muted); border-bottom: 1px solid var(--border); font-weight: 600;
+  }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--s2); }
+  td { padding: 10px 14px; font-size: 12px; }
+  .mono-cell { font-family: 'DM Mono', monospace; }
+  .type-pill {
+    display: inline-flex; align-items: center;
+    padding: 2px 8px; border-radius: 5px; font-size: 11px; font-weight: 600;
+  }
+  .pill-g { background: rgba(79,142,247,.1); color: var(--blue); }
+  .pill-i { background: rgba(34,201,122,.1); color: var(--green); }
+  .pill-u { background: rgba(255,255,255,.05); color: var(--muted); }
+  .no-vat { font-size: 11px; color: var(--red); }
+
+  /* Empty */
+  .empty-q { padding: 48px; text-align: center; color: var(--muted); }
+  .empty-q-icon { font-size: 32px; margin-bottom: 10px; }
+
+  @media (max-width: 700px) {
+    .year-summary { grid-template-columns: 1fr 1fr; }
+    .modelo-303   { grid-template-columns: 1fr; }
+    thead th:nth-child(n+5) { display: none; }
+    td:nth-child(n+5) { display: none; }
+    .nav-links { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="/" class="nav-logo">⚡ InvoiceFlow</a>
+  <div class="nav-links">
+    <a href="/"       class="nav-link">📄 Facturas</a>
+    <a href="/vat"    class="nav-link active">🧾 IVA</a>
+    <a href="/pricing" class="nav-link">💳 Plan</a>
+  </div>
+</nav>
+
+<div class="main">
+
+  <!-- Page header -->
+  <div class="page-header">
+    <div>
+      <div class="page-title">IVA Trimestral</div>
+      <div class="page-sub">Modelo 303 · Datos para tu declaración trimestral</div>
+    </div>
+    <div class="year-selector">
+      <button class="year-btn" onclick="changeYear(-1)">←</button>
+      <div class="year-display" id="year-display">{{ year }}</div>
+      <button class="year-btn" onclick="changeYear(+1)">→</button>
+    </div>
+  </div>
+
+  <!-- Deadline alert -->
+  {% set cq = current_quarter %}
+  {% set days = cq.days_until_deadline %}
+  <div class="deadline-alert {% if days <= 7 %}urgent{% elif days <= 30 %}soon{% else %}ok{% endif %}">
+    <div class="alert-icon">
+      {% if days <= 7 %}🚨{% elif days <= 30 %}⚠️{% else %}📅{% endif %}
+    </div>
+    <div>
+      <div class="alert-title">
+        {% if days <= 0 %}
+          Plazo {{ cq.label }} vencido — presenta el 303 con recargo
+        {% elif days <= 7 %}
+          ¡Urgente! Declaración {{ cq.label }} en {{ days }} días
+        {% elif days <= 30 %}
+          Próxima declaración {{ cq.label }} en {{ days }} días
+        {% else %}
+          Próxima declaración: {{ cq.label }}
+        {% endif %}
+      </div>
+      <div class="alert-sub">Plazo: {{ cq.deadline.strftime("%d de %B de %Y") }}</div>
+    </div>
+    {% if days > 0 %}
+    <div class="alert-days" style="color:{% if days <= 7 %}var(--red){% elif days <= 30 %}var(--gold){% else %}var(--green){% endif %}">
+      {{ days }}
+      <span>días</span>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Year summary cards -->
+  <div class="year-summary" id="year-summary">
+    {% for qvat in quarters %}
+    <div class="ys-card {% if qvat.quarter.is_current %}active{% endif %}"
+         onclick="showQuarter({{ qvat.quarter.q }})">
+      <div class="ys-q">
+        {{ qvat.quarter.label }}
+        <span class="ys-q-badge
+          {% if qvat.quarter.is_current %}badge-current
+          {% elif qvat.quarter.is_past %}badge-past
+          {% else %}badge-future{% endif %}">
+          {% if qvat.quarter.is_current %}EN CURSO
+          {% elif qvat.quarter.is_past %}CERRADO
+          {% else %}FUTURO{% endif %}
+        </span>
+      </div>
+
+      {% if qvat.invoice_count > 0 %}
+      <div class="ys-result {% if qvat.resultado > 0 %}positive{% elif qvat.resultado < 0 %}negative{% else %}zero{% endif %}">
+        {{ "%.2f"|format(qvat.resultado|abs) }} €
+      </div>
+      <div class="ys-label">
+        {% if qvat.resultado > 0 %}A ingresar{% elif qvat.resultado < 0 %}A compensar{% else %}Neutro{% endif %}
+      </div>
+      <div class="ys-count">{{ qvat.invoice_count }} facturas</div>
+      {% else %}
+      <div class="ys-result empty">—</div>
+      <div class="ys-label">Sin datos</div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Quarter detail panels -->
+  {% for qvat in quarters %}
+  <div class="quarter-detail {% if qvat.quarter.is_current %}active{% endif %}"
+       id="qd-{{ qvat.quarter.q }}">
+
+    <div class="qd-header">
+      <div>
+        <div class="qd-title">{{ qvat.quarter.label }}</div>
+        <div class="qd-period">
+          {{ qvat.quarter.str_from }} → {{ qvat.quarter.str_to }} ·
+          Plazo: {{ qvat.quarter.deadline.strftime("%d/%m/%Y") }}
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <a href="/vat/export/{{ year }}/{{ qvat.quarter.q }}" class="btn btn-ghost">
+          ↓ CSV Holded
+        </a>
+        <a href="/vat/export/{{ year }}/{{ qvat.quarter.q }}?format=contasol" class="btn btn-ghost">
+          ↓ CSV Contasol
+        </a>
+      </div>
+    </div>
+
+    {% if qvat.invoice_count == 0 %}
+    <div class="empty-q">
+      <div class="empty-q-icon">📭</div>
+      <div style="font-size:14px;font-weight:600;margin-bottom:6px;">Sin facturas en {{ qvat.quarter.label }}</div>
+      <div style="font-size:13px;">Sube facturas de este período para calcular el IVA</div>
+    </div>
+
+    {% else %}
+
+    <!-- Resultado box -->
+    <div class="resultado-box {% if qvat.resultado > 0 %}pagar{% elif qvat.resultado < 0 %}compensar{% else %}cero{% endif %}">
+      <div>
+        <div class="resultado-label">Resultado Modelo 303</div>
+        <div class="resultado-value"
+             style="color:{% if qvat.resultado > 0 %}var(--red){% elif qvat.resultado < 0 %}var(--green){% else %}var(--muted){% endif %}">
+          {{ "%.2f"|format(qvat.resultado|abs) }} €
+        </div>
+        <div class="resultado-sub">
+          Rep. {{ "%.2f"|format(qvat.total_vat_issued) }} € − Ded. {{ "%.2f"|format(qvat.total_vat_received) }} €
+        </div>
+      </div>
+      <div class="resultado-type {% if qvat.resultado > 0 %}type-pagar{% elif qvat.resultado < 0 %}type-compensar{% else %}type-cero{% endif %}">
+        {{ qvat.resultado_label }}
+      </div>
+    </div>
+
+    <!-- 303 boxes -->
+    <div class="modelo-303">
+
+      <!-- IVA repercutido (ventas) -->
+      <div class="m303-box">
+        <div class="m303-title">
+          IVA repercutido (ventas)
+          <span class="m303-type type-repercutido">Devengado</span>
+        </div>
+        {% if qvat.issued_lines %}
+        <div class="m303-lines">
+          {% for line in qvat.issued_lines %}
+          <div class="m303-line">
+            <div class="m303-line-rate">IVA {{ "%.0f"|format(line.tax_rate * 100) }}%</div>
+            <div class="m303-line-nums">
+              <div class="m303-line-base">Base: {{ "%.2f"|format(line.base) }} €</div>
+              <div class="m303-line-quota" style="color:var(--red)">{{ "%.2f"|format(line.quota) }} €</div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        <div class="m303-total">
+          <span>Total repercutido</span>
+          <span class="m303-total-amount" style="color:var(--red)">{{ "%.2f"|format(qvat.total_vat_issued) }} €</span>
+        </div>
+        {% else %}
+        <div style="color:var(--muted);font-size:13px;padding:12px 0;">Sin facturas emitidas</div>
+        {% endif %}
+      </div>
+
+      <!-- IVA soportado (compras) -->
+      <div class="m303-box">
+        <div class="m303-title">
+          IVA soportado (compras)
+          <span class="m303-type type-soportado">Deducible</span>
+        </div>
+        {% if qvat.received_lines %}
+        <div class="m303-lines">
+          {% for line in qvat.received_lines %}
+          <div class="m303-line">
+            <div class="m303-line-rate">IVA {{ "%.0f"|format(line.tax_rate * 100) }}%</div>
+            <div class="m303-line-nums">
+              <div class="m303-line-base">Base: {{ "%.2f"|format(line.base) }} €</div>
+              <div class="m303-line-quota" style="color:var(--green)">{{ "%.2f"|format(line.quota) }} €</div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        <div class="m303-total">
+          <span>Total deducible</span>
+          <span class="m303-total-amount" style="color:var(--green)">{{ "%.2f"|format(qvat.total_vat_received) }} €</span>
+        </div>
+        {% else %}
+        <div style="color:var(--muted);font-size:13px;padding:12px 0;">Sin facturas recibidas</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Warnings -->
+    {% if qvat.missing_vat_count > 0 %}
+    <div class="warnings-box">
+      <div class="warnings-title">⚠️ Revisar antes de presentar</div>
+      <div class="warning-item">
+        • {{ qvat.missing_vat_count }} factura(s) sin datos de IVA —
+          pueden afectar al resultado del 303
+      </div>
+      {% if qvat.confidence_avg < 0.8 %}
+      <div class="warning-item">
+        • Confianza media de extracción: {{ "%.0f"|format(qvat.confidence_avg * 100) }}% —
+          revisa las facturas marcadas en naranja
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Invoice list -->
+    <div class="inv-table-card">
+      <div class="inv-table-header">
+        <div class="inv-table-title">Facturas incluidas</div>
+        <div class="inv-count">{{ qvat.invoice_count }} documentos</div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Proveedor / Cliente</th>
+            <th>Concepto</th>
+            <th>Tipo</th>
+            <th>Base</th>
+            <th>IVA %</th>
+            <th>Cuota</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for inv in qvat.invoices %}
+          <tr>
+            <td class="mono-cell" style="color:var(--muted);">{{ inv.invoice_date or "—" }}</td>
+            <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;">
+              {{ inv.vendor or inv.client or "—" }}
+            </td>
+            <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);">
+              {{ inv.concept or "—" }}
+            </td>
+            <td>
+              {% if inv.invoice_type.value == 'received' %}
+                <span class="type-pill pill-g">📥 Gasto</span>
+              {% elif inv.invoice_type.value == 'issued' %}
+                <span class="type-pill pill-i">📤 Ingreso</span>
+              {% else %}
+                <span class="type-pill pill-u">?</span>
+              {% endif %}
+            </td>
+            <td class="mono-cell">
+              {% if inv.subtotal %}{{ "%.2f"|format(inv.subtotal) }} €
+              {% else %}<span class="no-vat">revisar</span>{% endif %}
+            </td>
+            <td style="color:var(--muted);">
+              {% if inv.tax_rate %}{{ "%.0f"|format(inv.tax_rate * 100) }}%
+              {% else %}<span class="no-vat">—</span>{% endif %}
+            </td>
+            <td class="mono-cell">
+              {% if inv.tax_amount %}{{ "%.2f"|format(inv.tax_amount) }} €
+              {% else %}<span class="no-vat">revisar</span>{% endif %}
+            </td>
+            <td class="mono-cell" style="font-weight:600;">
+              {% if inv.total %}{{ "%.2f"|format(inv.total) }} €{% else %}—{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% endif %}{# end if invoice_count > 0 #}
+  </div>
+  {% endfor %}
+
+</div>
+
+<script>
+let currentYear = {{ year }};
+let currentQ    = {{ current_q }};
+
+function showQuarter(q) {
+  document.querySelectorAll('.quarter-detail').forEach(d => d.classList.remove('active'));
+  document.querySelectorAll('.ys-card').forEach(c => c.classList.remove('active'));
+  document.getElementById('qd-' + q).classList.add('active');
+  document.querySelectorAll('.ys-card')[q - 1].classList.add('active');
+  currentQ = q;
+}
+
+function changeYear(delta) {
+  const newYear = currentYear + delta;
+  window.location.href = '/vat?year=' + newYear;
+}
+
+// Auto-show current quarter on load
+document.addEventListener('DOMContentLoaded', () => {
+  showQuarter(currentQ);
+});
+</script>
+</body>
+</html>

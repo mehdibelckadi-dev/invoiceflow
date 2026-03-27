@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InvoiceFlow — Acceder</title>
+<script>
+  // Clerk publishable key injected from server
+  window.__CLERK_PUBLISHABLE_KEY = "{{ clerk_publishable_key }}";
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
+        data-clerk-publishable-key="{{ clerk_publishable_key }}"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+  :root {
+    --bg: #0f1117; --surface: #181c27; --border: #2a3047;
+    --accent: #4f8ef7; --text: #e8ecf4; --muted: #6b7a99;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg); color: var(--text);
+    min-height: 100vh; display: flex;
+    align-items: center; justify-content: center;
+  }
+  .container { width: 100%; max-width: 400px; padding: 24px; }
+  .logo {
+    font-size: 24px; font-weight: 700; color: var(--accent);
+    text-align: center; margin-bottom: 8px; letter-spacing: -0.5px;
+  }
+  .logo span { color: var(--text); }
+  .tagline { text-align: center; color: var(--muted); font-size: 13px; margin-bottom: 32px; }
+  #clerk-sign-in { width: 100%; }
+
+  /* Override Clerk component styles to match our dark theme */
+  .cl-card {
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 16px !important;
+    box-shadow: none !important;
+  }
+  .cl-headerTitle, .cl-bodyText { color: var(--text) !important; }
+  .cl-formFieldInput {
+    background: #0f1117 !important;
+    border-color: var(--border) !important;
+    color: var(--text) !important;
+  }
+  .cl-formButtonPrimary {
+    background: var(--accent) !important;
+    border-radius: 8px !important;
+  }
+  .cl-footerActionLink { color: var(--accent) !important; }
+
+  .features {
+    margin-top: 28px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .feature {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 13px; color: var(--muted);
+  }
+  .feature-icon { font-size: 16px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="logo">⚡ Invoice<span>Flow</span></div>
+  <div class="tagline">Sube una factura. Claude hace el resto.</div>
+
+  <div id="clerk-sign-in"></div>
+
+  <div class="features">
+    <div class="feature"><span class="feature-icon">🤖</span> Extracción automática con IA</div>
+    <div class="feature"><span class="feature-icon">📨</span> Ingesta por email y carpeta</div>
+    <div class="feature"><span class="feature-icon">📋</span> Export directo a Google Sheets</div>
+    <div class="feature"><span class="feature-icon">🔒</span> Tus datos son solo tuyos</div>
+  </div>
+</div>
+
+<script>
+window.addEventListener("load", async () => {
+  await window.Clerk.load();
+
+  if (window.Clerk.user) {
+    window.location.href = "/";
+    return;
+  }
+
+  window.Clerk.mountSignIn(document.getElementById("clerk-sign-in"), {
+    afterSignInUrl: "/",
+    afterSignUpUrl: "/onboarding",
+    signUpUrl: "/login",
+  });
+});
+</script>
+</body>
+</html>
