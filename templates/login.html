@@ -8,8 +8,8 @@
   // Clerk publishable key injected from server
   window.__CLERK_PUBLISHABLE_KEY = "{{ clerk_publishable_key }}";
 </script>
-<script async src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
-        data-clerk-publishable-key="{{ clerk_publishable_key }}"></script>
+<script>window.__clerk_publishable_key = "{{ clerk_publishable_key }}";</script>
+<script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
   :root {
