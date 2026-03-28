@@ -65,6 +65,7 @@ async def login_page(request: Request):
     return templates.TemplateResponse("login.html", {
         "request": request,
         "clerk_publishable_key": os.getenv("CLERK_PUBLISHABLE_KEY", ""),
+        "clerk_frontend_api": os.getenv("CLERK_FRONTEND_API", "infinite-kit-16.clerk.accounts.dev"),
     })
 
 
