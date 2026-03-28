@@ -11,43 +11,166 @@
     background: #0a0b0f; color: #e8ecf4;
     min-height: 100vh; display: flex;
     align-items: center; justify-content: center;
+    flex-direction: column; gap: 24px;
   }
-  .container { width: 100%; max-width: 420px; padding: 24px; text-align: center; }
-  .logo { font-size: 24px; font-weight: 700; color: #e8c97a; margin-bottom: 8px; }
+  .logo { font-size: 24px; font-weight: 700; color: #e8c97a; }
   .logo span { color: #e8ecf4; }
-  .tagline { color: #6b7a99; font-size: 13px; margin-bottom: 32px; }
-  #clerk-sign-in { min-height: 300px; }
+  .tagline { color: #6b7a99; font-size: 13px; }
+  .card {
+    background: #13151e; border: 1px solid #252836;
+    border-radius: 16px; padding: 32px;
+    width: 100%; max-width: 400px;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  .card h2 { font-size: 18px; font-weight: 700; }
+  .card p { font-size: 13px; color: #6b7a99; }
+  input {
+    width: 100%; padding: 12px; border-radius: 9px;
+    background: #1a1d28; border: 1px solid #252836;
+    color: #e8ecf4; font-size: 14px; outline: none;
+  }
+  input:focus { border-color: #e8c97a; }
+  .btn {
+    width: 100%; padding: 13px; border-radius: 10px;
+    background: #e8c97a; color: #0a0b0f;
+    font-weight: 700; font-size: 14px;
+    border: none; cursor: pointer;
+  }
+  .btn:hover { background: #f0d898; }
+  .btn-ghost {
+    background: transparent; color: #6b7a99;
+    border: 1px solid #252836;
+  }
+  .error {
+    color: #f25f5c; font-size: 12px;
+    display: none; padding: 10px;
+    background: rgba(242,95,92,0.1);
+    border-radius: 8px;
+  }
+  .divider {
+    display: flex; align-items: center; gap: 12px;
+    color: #6b7a99; font-size: 12px;
+  }
+  .divider::before, .divider::after {
+    content: ''; flex: 1; height: 1px; background: #252836;
+  }
 </style>
 </head>
 <body>
-<div class="container">
-  <div class="logo">⚡ Invoice<span>Flow</span></div>
-  <div class="tagline">Sube una factura. Claude hace el resto.</div>
-  <div id="clerk-sign-in"></div>
+<div class="logo">⚡ Invoice<span>Flow</span></div>
+<div class="tagline">Sube una factura. Claude hace el resto.</div>
+
+<div class="card" id="login-card">
+  <h2>Acceder a InvoiceFlow</h2>
+  <p>Introduce tu email para continuar</p>
+  <div class="error" id="error-msg"></div>
+  <input type="email" id="email" placeholder="tu@email.com" autocomplete="email">
+  <input type="password" id="password" placeholder="Contraseña" autocomplete="current-password" style="display:none">
+  <button class="btn" id="main-btn" onclick="handleAuth()">Continuar</button>
+  <div class="divider">o</div>
+  <button class="btn btn-ghost" onclick="handleGoogle()">Continuar con Google</button>
+  <p style="text-align:center;font-size:12px;color:#6b7a99;">
+    ¿No tienes cuenta? <a href="#" onclick="toggleMode()" style="color:#e8c97a;">Regístrate</a>
+  </p>
 </div>
 
 <script>
-  const clerkPk = "{{ clerk_publishable_key }}";
+  const PK = "{{ clerk_publishable_key }}";
+  const FRONTEND_API = "https://{{ clerk_frontend_api }}";
+  let mode = 'signin'; // 'signin' | 'signup'
+  let emailVerified = false;
 
-  async function loadClerk() {
-    const script = document.createElement('script');
-    script.src = 'https://unpkg.com/@clerk/clerk-js@4.70.0/dist/clerk.browser.js';
-    script.onload = async function() {
-      const clerk = new window.Clerk(clerkPk);
-      await clerk.load();
-      if (clerk.user) {
-        window.location.href = '/';
-      } else {
-        clerk.mountSignIn(document.getElementById('clerk-sign-in'), {
-          afterSignInUrl: '/',
-          afterSignUpUrl: '/',
-        });
-      }
-    };
-    document.head.appendChild(script);
+  function showError(msg) {
+    const el = document.getElementById('error-msg');
+    el.textContent = msg;
+    el.style.display = 'block';
   }
 
-  loadClerk();
+  function hideError() {
+    document.getElementById('error-msg').style.display = 'none';
+  }
+
+  function toggleMode() {
+    mode = mode === 'signin' ? 'signup' : 'signin';
+    document.querySelector('.card h2').textContent =
+      mode === 'signin' ? 'Acceder a InvoiceFlow' : 'Crear cuenta';
+    document.getElementById('main-btn').textContent =
+      mode === 'signin' ? 'Continuar' : 'Registrarse';
+    document.querySelector('.card p:last-of-type').innerHTML =
+      mode === 'signin'
+        ? '¿No tienes cuenta? <a href="#" onclick="toggleMode()" style="color:#e8c97a;">Regístrate</a>'
+        : '¿Ya tienes cuenta? <a href="#" onclick="toggleMode()" style="color:#e8c97a;">Acceder</a>';
+    hideError();
+  }
+
+  async function handleAuth() {
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const pwdInput = document.getElementById('password');
+
+    if (!email) { showError('Introduce tu email'); return; }
+
+    if (!pwdInput.style.display || pwdInput.style.display === 'none') {
+      pwdInput.style.display = 'block';
+      document.getElementById('main-btn').textContent =
+        mode === 'signin' ? 'Acceder' : 'Crear cuenta';
+      pwdInput.focus();
+      return;
+    }
+
+    if (!password) { showError('Introduce tu contraseña'); return; }
+
+    hideError();
+    document.getElementById('main-btn').textContent = 'Cargando...';
+    document.getElementById('main-btn').disabled = true;
+
+    try {
+      const endpoint = mode === 'signin'
+        ? `${FRONTEND_API}/v1/client/sign_ins`
+        : `${FRONTEND_API}/v1/client/sign_ups`;
+
+      const body = mode === 'signin'
+        ? { identifier: email, password }
+        : { email_address: email, password };
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${PK}`,
+        },
+        credentials: 'include',
+        body: JSON.stringify(body),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.response?.status === 'complete') {
+        window.location.href = '/';
+      } else if (data.errors?.length) {
+        showError(data.errors[0].long_message || data.errors[0].message);
+      } else {
+        showError('Error al autenticar. Intenta de nuevo.');
+      }
+    } catch(e) {
+      showError('Error de conexión. Intenta de nuevo.');
+    } finally {
+      document.getElementById('main-btn').disabled = false;
+      document.getElementById('main-btn').textContent =
+        mode === 'signin' ? 'Acceder' : 'Crear cuenta';
+    }
+  }
+
+  function handleGoogle() {
+    window.location.href = `${FRONTEND_API}/v1/client/sign_ins?strategy=oauth_google&redirect_url=${encodeURIComponent(window.location.origin + '/')}`;
+  }
+
+  document.getElementById('email').addEventListener('keydown', e => {
+    if (e.key === 'Enter') handleAuth();
+  });
+  document.getElementById('password').addEventListener('keydown', e => {
+    if (e.key === 'Enter') handleAuth();
+  });
 </script>
 </body>
 </html>
