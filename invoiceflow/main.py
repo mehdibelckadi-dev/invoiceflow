@@ -55,7 +55,9 @@ async def startup():
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "version": "0.3.0"}
+    import os
+    pk = os.getenv("CLERK_PUBLISHABLE_KEY", "NOT_FOUND")
+    return {"status": "ok", "version": "0.3.0", "pk_loaded": pk[:20] if pk else "EMPTY"}
 
 
 # ── Auth pages ─────────────────────────────────────────────────────────────────
