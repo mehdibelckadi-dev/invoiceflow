@@ -71,6 +71,12 @@ async def login_page(request: Request):
     })
 
 
+@app.get("/debug-login")
+async def debug_login():
+    import os
+    pk = os.getenv("CLERK_PUBLISHABLE_KEY", "EMPTY")
+    return {"pk": pk, "length": len(pk)}
+
 @app.get("/onboarding", response_class=HTMLResponse)
 async def onboarding(request: Request, user_id: str = Depends(get_current_user)):
     """Post-signup: ensure subscription record exists, redirect to pricing."""
