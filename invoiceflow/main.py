@@ -31,7 +31,7 @@ app = FastAPI(title="InvoiceFlow", version="0.3.0")
 app.add_middleware(ClerkAuthMiddleware)
 
 BASE_DIR  = Path(__file__).parent
-templates = Jinja2Templates(directory=str(BASE_DIR.parent / "templates"))
+templates = Jinja2Templates(directory="/app/templates")
 
 settings: Settings = None  # type: ignore[assignment]
 
