@@ -6,7 +6,7 @@ cmds = ["corepack enable && corepack prepare pnpm@9.0.0 --activate && pnpm insta
 dependsOn = ["setup"]
 
 [phases.build]
-cmds = ["pnpm --filter @lefse/api build"]
+cmds = ["pnpm --filter @lefse/shared build && pnpm --filter @lefse/api build"]
 dependsOn = ["install"]
 
 [start]
