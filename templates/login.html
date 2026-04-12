@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InvoiceFlow — Acceder</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, sans-serif;
+    background: #0a0b0f; color: #e8ecf4;
+    min-height: 100vh; display: flex;
+    align-items: center; justify-content: center;
+  }
+  .container { width: 100%; max-width: 420px; padding: 24px; text-align: center; }
+  .logo { font-size: 24px; font-weight: 700; color: #e8c97a; margin-bottom: 8px; }
+  .logo span { color: #e8ecf4; }
+  .tagline { color: #6b7a99; font-size: 13px; margin-bottom: 32px; }
+  #clerk-sign-in { min-height: 300px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="logo">⚡ Invoice<span>Flow</span></div>
+  <div class="tagline">Sube una factura. Claude hace el resto.</div>
+  <div id="clerk-sign-in"></div>
+</div>
+
+<script src="https://unpkg.com/@clerk/clerk-js@4/dist/clerk.browser.js"></script>
+<script>
+  const pk = "{{ clerk_publishable_key }}";
+  
+  document.addEventListener('DOMContentLoaded', async function() {
+    try {
+      const clerk = new Clerk(pk);
+      await clerk.load();
+      
+      if (clerk.user) {
+        window.location.href = '/';
+      } else {
+        clerk.mountSignIn(document.getElementById('clerk-sign-in'), {
+          afterSignInUrl: '/',
+          afterSignUpUrl: '/',
+        });
+      }
+    } catch(e) {
+      console.error('Clerk error:', e);
+      document.getElementById('clerk-sign-in').innerHTML = 
+        '<p style="color:#f25f5c">Error cargando login: ' + e.message + '</p>';
+    }
+  });
+</script>
+</body>
+</html>

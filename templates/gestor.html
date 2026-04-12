@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InvoiceFlow — Portal Gestor · {{ share.label or "Facturas compartidas" }}</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #0a0b0f;
+    --surface:  #13151e;
+    --surface2: #1a1d28;
+    --border:   #252836;
+    --gold:     #e8c97a;
+    --green:    #22c97a;
+    --red:      #f25f5c;
+    --blue:     #4f8ef7;
+    --text:     #e8ecf4;
+    --muted:    #6b7a99;
+    --smoke:    #b0b8cc;
+    --radius:   14px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg); color: var(--text);
+    min-height: 100vh; font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Header ── */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 20px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 16px;
+  }
+  .header-left { display: flex; align-items: center; gap: 16px; }
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-size: 17px; font-weight: 700; color: var(--gold);
+    display: flex; align-items: center; gap: 7px;
+  }
+  .logo-dot { width: 6px; height: 6px; background: var(--gold); border-radius: 50%; }
+  .header-divider { width: 1px; height: 28px; background: var(--border); }
+  .header-title { font-size: 15px; font-weight: 600; }
+  .header-sub   { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  .readonly-badge {
+    display: flex; align-items: center; gap: 6px;
+    padding: 5px 12px; border-radius: 999px;
+    background: rgba(34,201,122,0.08);
+    border: 1px solid rgba(34,201,122,0.2);
+    font-size: 11px; color: var(--green); font-weight: 600;
+  }
+
+  /* ── Main ── */
+  .main { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+
+  /* ── Period banner ── */
+  .period-banner {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 24px; flex-wrap: wrap; gap: 12px;
+  }
+  .period-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px; }
+  .period-value {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px; font-weight: 700; letter-spacing: -0.4px;
+  }
+  .export-btn {
+    display: flex; align-items: center; gap: 7px;
+    padding: 9px 18px; border-radius: 9px;
+    background: var(--gold); color: var(--bg);
+    font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+    border: none; cursor: pointer; text-decoration: none;
+    transition: background 0.15s;
+  }
+  .export-btn:hover { background: #f0d898; }
+
+  /* ── Stats ── */
+  .stats-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px; margin-bottom: 28px;
+  }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px 22px;
+  }
+  .stat-label {
+    font-size: 10px; color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.8px; font-weight: 600; margin-bottom: 10px;
+  }
+  .stat-value {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px; font-weight: 800; letter-spacing: -1px; line-height: 1;
+  }
+  .stat-value.green  { color: var(--green); }
+  .stat-value.gold   { color: var(--gold); }
+  .stat-value.blue   { color: var(--blue); }
+  .stat-value.red    { color: var(--red); }
+  .stat-sub { font-size: 11px; color: var(--muted); margin-top: 6px; }
+
+  /* ── Category breakdown ── */
+  .breakdown-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px 24px;
+    margin-bottom: 28px;
+  }
+  .breakdown-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 14px; font-weight: 700; margin-bottom: 16px;
+  }
+  .breakdown-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 8px 0; border-bottom: 1px solid var(--border);
+  }
+  .breakdown-row:last-child { border-bottom: none; }
+  .breakdown-cat { flex: 1; font-size: 13px; }
+  .breakdown-bar-bg {
+    width: 120px; height: 4px; background: var(--border);
+    border-radius: 2px; overflow: hidden; flex-shrink: 0;
+  }
+  .breakdown-bar { height: 100%; background: var(--gold); border-radius: 2px; }
+  .breakdown-amount {
+    font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+    min-width: 80px; text-align: right; color: var(--gold);
+  }
+  .breakdown-pct { font-size: 11px; color: var(--muted); min-width: 36px; text-align: right; }
+
+  /* ── Table ── */
+  .table-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden;
+    margin-bottom: 28px;
+  }
+  .table-header {
+    padding: 16px 20px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    flex-wrap: wrap;
+  }
+  .table-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; }
+  .table-count { font-size: 12px; color: var(--muted); }
+
+  .search-input {
+    padding: 7px 12px; border-radius: 8px;
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); font-size: 12px; font-family: 'DM Sans', sans-serif;
+    outline: none; width: 200px; transition: border-color 0.15s;
+  }
+  .search-input:focus { border-color: var(--gold); }
+  .search-input::placeholder { color: var(--muted); }
+
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    text-align: left; padding: 10px 16px;
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.7px;
+    color: var(--muted); border-bottom: 1px solid var(--border); font-weight: 600;
+  }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--surface2); }
+  td { padding: 11px 16px; font-size: 13px; }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600;
+  }
+  .badge-received { background: rgba(79,142,247,0.12); color: var(--blue); }
+  .badge-issued   { background: rgba(34,201,122,0.12); color: var(--green); }
+  .badge-unknown  { background: rgba(255,255,255,0.06); color: var(--muted); }
+
+  .cat-pill {
+    background: var(--surface2); padding: 2px 8px;
+    border-radius: 6px; font-size: 11px; color: var(--muted);
+  }
+  .amount { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 600; }
+  .conf-dot {
+    width: 7px; height: 7px; border-radius: 50%; display: inline-block;
+  }
+
+  /* ── Tickets section ── */
+  .tickets-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden; margin-bottom: 28px;
+  }
+
+  /* ── Footer ── */
+  .portal-footer {
+    text-align: center; padding: 24px;
+    border-top: 1px solid var(--border);
+    font-size: 12px; color: var(--muted);
+  }
+  .portal-footer a { color: var(--gold); text-decoration: none; }
+
+  /* ── Empty state ── */
+  .empty { padding: 48px; text-align: center; color: var(--muted); }
+  .empty-icon { font-size: 36px; margin-bottom: 12px; }
+  .empty-text { font-size: 14px; font-weight: 500; color: var(--smoke); margin-bottom: 6px; }
+
+  @media (max-width: 640px) {
+    .header { padding: 16px; }
+    .main   { padding: 16px; }
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+    thead th:nth-child(n+5) { display: none; }
+    td:nth-child(n+5)       { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-left">
+    <div class="logo">
+      <div class="logo-dot"></div>
+      InvoiceFlow
+    </div>
+    <div class="header-divider"></div>
+    <div>
+      <div class="header-title">{{ share.label or "Facturas compartidas" }}</div>
+      <div class="header-sub">Compartido por {{ owner_name }} · Solo lectura</div>
+    </div>
+  </div>
+  <div class="readonly-badge">
+    🔒 Solo lectura
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- Period banner -->
+  <div class="period-banner">
+    <div>
+      <div class="period-label">Período</div>
+      <div class="period-value">
+        {% if share.date_from and share.date_to %}
+          {{ share.date_from }} → {{ share.date_to }}
+        {% else %}
+          Todas las facturas
+        {% endif %}
+      </div>
+    </div>
+    <a href="/share/{{ share.token }}/export.csv" class="export-btn">
+      ↓ Exportar CSV
+    </a>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Facturas recibidas</div>
+      <div class="stat-value blue">{{ data.invoice_count }}</div>
+      <div class="stat-sub">documentos procesados</div>
+    </div>
+
+    {% if share.include_amounts %}
+    <div class="stat-card">
+      <div class="stat-label">Gasto total (IVA incl.)</div>
+      <div class="stat-value gold">{{ "%.2f"|format(data.total_received) }} €</div>
+      <div class="stat-sub">facturas recibidas</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">IVA soportado deducible</div>
+      <div class="stat-value green">{{ "%.2f"|format(data.total_vat) }} €</div>
+      <div class="stat-sub">a deducir en declaración</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Ingresos facturados</div>
+      <div class="stat-value" style="color:var(--smoke);">{{ "%.2f"|format(data.total_issued) }} €</div>
+      <div class="stat-sub">facturas emitidas</div>
+    </div>
+    {% endif %}
+
+    {% if share.include_tickets and data.ticket_count %}
+    <div class="stat-card">
+      <div class="stat-label">Tickets de gastos</div>
+      <div class="stat-value" style="color:var(--muted);">{{ data.ticket_count }}</div>
+      <div class="stat-sub">pendientes de factura formal</div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Category breakdown -->
+  {% if share.include_amounts and data.by_category %}
+  <div class="breakdown-card">
+    <div class="breakdown-title">Gasto por categoría</div>
+    {% set max_amount = data.by_category.values()|max %}
+    {% for cat, amount in data.by_category|dictsort(by='value', reverse=True) %}
+    <div class="breakdown-row">
+      <div class="breakdown-cat">{{ cat }}</div>
+      <div class="breakdown-bar-bg">
+        <div class="breakdown-bar"
+             style="width: {{ ((amount / max_amount) * 100)|int }}%"></div>
+      </div>
+      <div class="breakdown-amount">{{ "%.2f"|format(amount) }} €</div>
+      <div class="breakdown-pct">
+        {{ ((amount / data.total_received) * 100)|int }}%
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Invoices table -->
+  <div class="table-card">
+    <div class="table-header">
+      <div>
+        <div class="table-title">Facturas</div>
+        <div class="table-count">{{ data.invoice_count }} documentos</div>
+      </div>
+      <input class="search-input" type="text" placeholder="🔍 Buscar…"
+             oninput="filterTable(this.value, 'inv-table')">
+    </div>
+
+    {% if data.invoices %}
+    <table>
+      <thead>
+        <tr>
+          <th>Nº Factura</th>
+          <th>Fecha</th>
+          <th>Proveedor / Cliente</th>
+          <th>Concepto</th>
+          <th>Categoría</th>
+          {% if share.include_amounts %}
+          <th>Base</th>
+          <th>IVA</th>
+          <th>Total</th>
+          {% endif %}
+          <th>Tipo</th>
+          <th>Conf.</th>
+        </tr>
+      </thead>
+      <tbody id="inv-table">
+        {% for inv in data.invoices %}
+        <tr>
+          <td style="font-family:monospace;font-size:11px;color:var(--muted);">
+            {{ inv.invoice_number or "—" }}
+          </td>
+          <td style="white-space:nowrap;color:var(--muted);">
+            {{ inv.invoice_date or "—" }}
+          </td>
+          <td style="font-weight:500;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+            {{ inv.vendor or inv.client or "—" }}
+          </td>
+          <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);"
+              title="{{ inv.concept or '' }}">
+            {{ inv.concept or "—" }}
+          </td>
+          <td>
+            {% if inv.category %}
+            <span class="cat-pill">{{ inv.category }}</span>
+            {% else %}—{% endif %}
+          </td>
+          {% if share.include_amounts %}
+          <td>
+            {% if inv.subtotal %}
+            <span class="amount">{{ "%.2f"|format(inv.subtotal) }} €</span>
+            {% else %}—{% endif %}
+          </td>
+          <td style="color:var(--muted);">
+            {% if inv.tax_rate %}{{ "%.0f"|format(inv.tax_rate * 100) }}%{% else %}—{% endif %}
+          </td>
+          <td>
+            {% if inv.total %}
+            <span class="amount" style="color:{% if inv.invoice_type.value == 'issued' %}var(--green){% else %}var(--text){% endif %};">
+              {{ "%.2f"|format(inv.total) }} €
+            </span>
+            {% else %}—{% endif %}
+          </td>
+          {% endif %}
+          <td>
+            <span class="badge badge-{{ inv.invoice_type.value }}">
+              {% if inv.invoice_type.value == 'received' %}📥 Gasto
+              {% elif inv.invoice_type.value == 'issued'   %}📤 Ingreso
+              {% else %}—{% endif %}
+            </span>
+          </td>
+          <td>
+            {% set pct = (inv.confidence * 100)|int %}
+            <span class="conf-dot" style="background:{% if pct >= 80 %}var(--green){% elif pct >= 50 %}var(--gold){% else %}var(--red){% endif %};"></span>
+            <span style="font-size:11px;color:var(--muted);margin-left:4px;">{{ pct }}%</span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty">
+      <div class="empty-icon">📭</div>
+      <div class="empty-text">Sin facturas en este período</div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Tickets section (optional) -->
+  {% if share.include_tickets and data.tickets %}
+  <div class="tickets-card">
+    <div class="table-header">
+      <div>
+        <div class="table-title">Tickets de gastos</div>
+        <div class="table-count">{{ data.ticket_count }} tickets · pendientes de factura formal</div>
+      </div>
+      <input class="search-input" type="text" placeholder="🔍 Buscar…"
+             oninput="filterTable(this.value, 'ticket-table')">
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Comercio</th>
+          <th>Fecha</th>
+          <th>Concepto</th>
+          <th>Categoría</th>
+          {% if share.include_amounts %}<th>Total</th>{% endif %}
+          <th>Estado</th>
+        </tr>
+      </thead>
+      <tbody id="ticket-table">
+        {% for t in data.tickets %}
+        <tr>
+          <td style="font-weight:500;">{{ t.vendor_name or "—" }}</td>
+          <td style="color:var(--muted);white-space:nowrap;">{{ t.ticket_date or "—" }}</td>
+          <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);">
+            {{ t.concept or "—" }}
+          </td>
+          <td>
+            {% if t.category %}
+            <span class="cat-pill">{{ t.category }}</span>
+            {% else %}—{% endif %}
+          </td>
+          {% if share.include_amounts %}
+          <td>
+            {% if t.total %}
+            <span class="amount">{{ "%.2f"|format(t.total) }} €</span>
+            {% else %}—{% endif %}
+          </td>
+          {% endif %}
+          <td>
+            {% if t.status.value == 'invoice_sent' %}
+            <span class="badge" style="background:rgba(232,201,122,.1);color:var(--gold);">✉️ Solicitada</span>
+            {% elif t.status.value == 'invoice_received' %}
+            <span class="badge badge-issued">✅ Recibida</span>
+            {% else %}
+            <span class="badge badge-unknown">⏳ Pendiente</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+</div>
+
+<!-- Footer -->
+<div class="portal-footer">
+  Generado con <a href="/">InvoiceFlow</a> ·
+  Solo lectura · Los datos pertenecen al usuario ·
+  {% if share.expires_at %}
+    Enlace válido hasta {{ share.expires_at | int | timestamp_to_date }}
+  {% else %}
+    Enlace sin caducidad
+  {% endif %}
+</div>
+
+<script>
+function filterTable(q, tableId) {
+  q = q.toLowerCase();
+  document.querySelectorAll(`#${tableId} tr`).forEach(row => {
+    row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,50 @@
+# Secrets — NUNCA subir al repo
+.env
+credentials.json
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+venv/
+env/
+
+# Data — generada en producción, no en el repo
+~/.invoiceflow/
+*.db
+*.sqlite
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Node
+node_modules/
+.next/
+.turbo/
+
+# Build output
+apps/api/dist/
+apps/web/.next/
+
+# Env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+pnpm-debug.log*

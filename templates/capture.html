@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0b0f">
+<title>InvoiceFlow — Capturar ticket</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --bg:       #0a0b0f;
+    --surface:  #13151e;
+    --surface2: #1a1d28;
+    --border:   #252836;
+    --gold:     #e8c97a;
+    --gold2:    #f0d898;
+    --green:    #22c97a;
+    --red:      #f25f5c;
+    --blue:     #4f8ef7;
+    --text:     #e8ecf4;
+    --muted:    #6b7a99;
+    --radius:   16px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Top bar ── */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px 12px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 50;
+  }
+  .topbar-logo {
+    font-family: 'Syne', sans-serif;
+    font-size: 16px; font-weight: 700; color: var(--gold);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .topbar-back {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 13px; color: var(--muted); text-decoration: none;
+    padding: 6px 12px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--surface);
+  }
+
+  /* ── Screens ── */
+  .screen { display: none; flex-direction: column; min-height: calc(100vh - 57px); }
+  .screen.active { display: flex; }
+
+  /* ═══════════════════════════════
+     SCREEN 1 — CAPTURE
+  ═══════════════════════════════ */
+  #screen-capture {
+    align-items: center; justify-content: center;
+    padding: 24px 20px; gap: 20px;
+  }
+
+  .capture-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 26px; font-weight: 800; letter-spacing: -0.8px;
+    text-align: center; line-height: 1.15;
+  }
+  .capture-title em { color: var(--gold); font-style: normal; }
+  .capture-sub { font-size: 14px; color: var(--muted); text-align: center; max-width: 280px; }
+
+  /* Camera viewfinder */
+  .viewfinder {
+    width: 100%; max-width: 340px;
+    aspect-ratio: 3/4;
+    border-radius: var(--radius);
+    border: 2px solid var(--border);
+    background: var(--surface);
+    position: relative; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .viewfinder video {
+    width: 100%; height: 100%; object-fit: cover; border-radius: 14px;
+  }
+  .viewfinder-placeholder {
+    display: flex; flex-direction: column;
+    align-items: center; gap: 12px; padding: 24px;
+    text-align: center;
+  }
+  .vf-icon { font-size: 48px; }
+  .vf-text { font-size: 13px; color: var(--muted); }
+
+  /* Corner brackets */
+  .vf-corners { position: absolute; inset: 0; pointer-events: none; }
+  .vf-corner {
+    position: absolute; width: 22px; height: 22px;
+    border-color: var(--gold); border-style: solid; opacity: 0.6;
+  }
+  .vf-corner-tl { top: 12px; left: 12px; border-width: 2px 0 0 2px; border-radius: 3px 0 0 0; }
+  .vf-corner-tr { top: 12px; right: 12px; border-width: 2px 2px 0 0; border-radius: 0 3px 0 0; }
+  .vf-corner-bl { bottom: 12px; left: 12px; border-width: 0 0 2px 2px; border-radius: 0 0 0 3px; }
+  .vf-corner-br { bottom: 12px; right: 12px; border-width: 0 2px 2px 0; border-radius: 0 0 3px 0; }
+
+  /* Preview image */
+  #preview-img {
+    width: 100%; height: 100%; object-fit: cover;
+    border-radius: 14px; display: none;
+  }
+
+  /* Capture buttons */
+  .capture-actions { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 340px; }
+
+  .btn-capture {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    padding: 16px; border-radius: 14px;
+    font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700;
+    border: none; cursor: pointer; transition: all 0.2s; width: 100%;
+  }
+  .btn-capture-primary { background: var(--gold); color: var(--bg); }
+  .btn-capture-primary:hover { background: var(--gold2); }
+  .btn-capture-secondary {
+    background: var(--surface); color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-capture-secondary:hover { background: var(--surface2); }
+  .btn-icon { font-size: 18px; }
+
+  /* Hidden file input */
+  #file-input { display: none; }
+
+  /* ═══════════════════════════════
+     SCREEN 2 — PROCESSING
+  ═══════════════════════════════ */
+  #screen-processing {
+    align-items: center; justify-content: center;
+    gap: 24px; padding: 40px 20px; text-align: center;
+  }
+
+  .processing-animation {
+    width: 80px; height: 80px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, rgba(232,201,122,0.15), rgba(232,201,122,0.05));
+    border: 1px solid rgba(232,201,122,0.25);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px;
+    animation: float 2s ease-in-out infinite;
+    position: relative;
+  }
+  .processing-animation::after {
+    content: '';
+    position: absolute; inset: -4px;
+    border-radius: 24px;
+    border: 2px solid transparent;
+    border-top-color: var(--gold);
+    animation: spin 1.2s linear infinite;
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50%       { transform: translateY(-6px); }
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .processing-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px; font-weight: 800; letter-spacing: -0.5px;
+  }
+  .processing-steps { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 300px; }
+  .processing-step {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; border-radius: 10px;
+    background: var(--surface); border: 1px solid var(--border);
+    font-size: 13px; color: var(--muted);
+    transition: all 0.3s;
+  }
+  .processing-step.done   { color: var(--green); border-color: rgba(34,201,122,0.2); }
+  .processing-step.active { color: var(--gold);  border-color: rgba(232,201,122,0.2); }
+  .step-check { font-size: 14px; transition: all 0.3s; }
+
+  /* ═══════════════════════════════
+     SCREEN 3 — RESULT
+  ═══════════════════════════════ */
+  #screen-result { padding: 20px; gap: 16px; }
+
+  .result-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    background: var(--surface);
+    border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px;
+  }
+  .result-vendor {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px; font-weight: 800; letter-spacing: -0.5px;
+  }
+  .result-date { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .result-total {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px; font-weight: 800; letter-spacing: -1px;
+    color: var(--green); text-align: right;
+  }
+  .result-total-sub { font-size: 11px; color: var(--muted); text-align: right; }
+
+  .result-fields {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .result-field {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px 14px;
+  }
+  .result-field-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 4px; }
+  .result-field-value { font-size: 13px; font-weight: 500; }
+
+  .confidence-row {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px 16px;
+  }
+  .conf-label { font-size: 12px; color: var(--muted); flex-shrink: 0; }
+  .conf-bar-bg { flex: 1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .conf-bar-fill { height: 100%; border-radius: 2px; transition: width 0.8s ease; }
+  .conf-pct { font-size: 12px; font-weight: 600; flex-shrink: 0; }
+
+  /* ═══════════════════════════════
+     SCREEN 4 — EMAIL REQUEST
+  ═══════════════════════════════ */
+  #screen-email { padding: 20px; gap: 16px; }
+
+  .email-header {
+    background: linear-gradient(135deg, rgba(232,201,122,0.08), rgba(232,201,122,0.03));
+    border: 1px solid rgba(232,201,122,0.2);
+    border-radius: var(--radius); padding: 20px;
+  }
+  .email-header-icon { font-size: 28px; margin-bottom: 10px; }
+  .email-header-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px; font-weight: 800; letter-spacing: -0.4px; margin-bottom: 6px;
+  }
+  .email-header-sub { font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+  .email-field {
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .email-field label { font-size: 12px; color: var(--muted); font-weight: 500; }
+  .email-input {
+    padding: 12px 14px; border-radius: 10px;
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text); font-size: 14px;
+    font-family: 'DM Sans', sans-serif;
+    outline: none; transition: border-color 0.2s; width: 100%;
+  }
+  .email-input:focus { border-color: var(--gold); }
+
+  .email-preview {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px;
+  }
+  .email-preview-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 10px; }
+  .email-preview-subject { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+  .email-preview-body {
+    font-size: 12px; color: var(--muted); line-height: 1.7;
+    white-space: pre-wrap; max-height: 180px; overflow-y: auto;
+    font-family: monospace;
+  }
+
+  .email-actions { display: flex; flex-direction: column; gap: 8px; }
+
+  .btn-action {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 14px; border-radius: 12px;
+    font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700;
+    border: none; cursor: pointer; transition: all 0.2s; width: 100%;
+    text-decoration: none;
+  }
+  .btn-gold    { background: var(--gold);    color: var(--bg); }
+  .btn-gold:hover { background: var(--gold2); }
+  .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  .btn-outline:hover { background: var(--surface2); }
+  .btn-ghost   { background: transparent; color: var(--muted); }
+  .btn-ghost:hover { color: var(--text); }
+
+  /* ═══════════════════════════════
+     SCREEN 5 — SUCCESS
+  ═══════════════════════════════ */
+  #screen-success {
+    align-items: center; justify-content: center;
+    padding: 40px 24px; text-align: center; gap: 20px;
+  }
+  .success-icon {
+    width: 80px; height: 80px; border-radius: 20px;
+    background: rgba(34,201,122,0.12);
+    border: 1px solid rgba(34,201,122,0.25);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px;
+    animation: pop 0.4s var(--ease) forwards;
+  }
+  @keyframes pop {
+    0%   { transform: scale(0.5); opacity: 0; }
+    70%  { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .success-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 26px; font-weight: 800; letter-spacing: -0.8px;
+  }
+  .success-sub { font-size: 14px; color: var(--muted); max-width: 260px; line-height: 1.6; }
+  .success-details {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px 20px;
+    width: 100%; max-width: 320px; text-align: left;
+  }
+  .success-detail-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; }
+  .success-detail-row:not(:last-child) { border-bottom: 1px solid var(--border); }
+  .sdk { color: var(--muted); }
+  .sdv { font-weight: 500; }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 20px;
+    font-size: 13px; font-weight: 500;
+    opacity: 0; transition: opacity 0.2s; z-index: 200;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; }
+  .toast.success { border-left: 3px solid var(--green); }
+  .toast.error   { border-left: 3px solid var(--red); }
+</style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="topbar">
+  <div class="topbar-logo">⚡ InvoiceFlow</div>
+  <a href="/" class="topbar-back">← Dashboard</a>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SCREEN 1 — CAPTURE
+══════════════════════════════════════════ -->
+<div class="screen active" id="screen-capture">
+  <div class="capture-title">Captura tu<br><em>ticket</em></div>
+  <p class="capture-sub">Foto del recibo o ticket. Claude extrae los datos y prepara la solicitud de factura.</p>
+
+  <div class="viewfinder" id="viewfinder">
+    <video id="camera-video" autoplay playsinline muted></video>
+    <img id="preview-img" alt="Preview">
+    <div class="viewfinder-placeholder" id="vf-placeholder">
+      <div class="vf-icon">🧾</div>
+      <div class="vf-text">Activa la cámara o<br>sube una foto</div>
+    </div>
+    <div class="vf-corners">
+      <div class="vf-corner vf-corner-tl"></div>
+      <div class="vf-corner vf-corner-tr"></div>
+      <div class="vf-corner vf-corner-bl"></div>
+      <div class="vf-corner vf-corner-br"></div>
+    </div>
+  </div>
+
+  <div class="capture-actions">
+    <button class="btn-capture btn-capture-primary" id="btn-camera" onclick="activateCamera()">
+      <span class="btn-icon">📷</span> Usar cámara
+    </button>
+    <button class="btn-capture btn-capture-secondary" onclick="document.getElementById('file-input').click()">
+      <span class="btn-icon">📁</span> Subir desde galería
+    </button>
+    <input type="file" id="file-input" accept="image/*" capture="environment" onchange="handleFileSelect(this)">
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SCREEN 2 — PROCESSING
+══════════════════════════════════════════ -->
+<div class="screen" id="screen-processing">
+  <div class="processing-animation">🤖</div>
+  <div class="processing-title">Claude está leyendo<br>tu ticket…</div>
+
+  <div class="processing-steps">
+    <div class="processing-step active" id="step-upload">
+      <span class="step-check">⏳</span> Subiendo imagen
+    </div>
+    <div class="processing-step" id="step-extract">
+      <span class="step-check">○</span> Extrayendo datos con IA
+    </div>
+    <div class="processing-step" id="step-email">
+      <span class="step-check">○</span> Preparando solicitud
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SCREEN 3 — RESULT
+══════════════════════════════════════════ -->
+<div class="screen" id="screen-result">
+  <div class="result-header">
+    <div>
+      <div class="result-vendor" id="r-vendor">—</div>
+      <div class="result-date" id="r-date">—</div>
+    </div>
+    <div>
+      <div class="result-total" id="r-total">—</div>
+      <div class="result-total-sub" id="r-tax">—</div>
+    </div>
+  </div>
+
+  <div class="result-fields">
+    <div class="result-field">
+      <div class="result-field-label">Concepto</div>
+      <div class="result-field-value" id="r-concept">—</div>
+    </div>
+    <div class="result-field">
+      <div class="result-field-label">Categoría</div>
+      <div class="result-field-value" id="r-category">—</div>
+    </div>
+    <div class="result-field">
+      <div class="result-field-label">Base imponible</div>
+      <div class="result-field-value" id="r-subtotal">—</div>
+    </div>
+    <div class="result-field">
+      <div class="result-field-label">NIF comercio</div>
+      <div class="result-field-value" id="r-nif">—</div>
+    </div>
+  </div>
+
+  <div class="confidence-row">
+    <span class="conf-label">Confianza IA</span>
+    <div class="conf-bar-bg">
+      <div class="conf-bar-fill" id="conf-fill" style="width:0%"></div>
+    </div>
+    <span class="conf-pct" id="conf-pct">0%</span>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:8px;">
+    <button class="btn-action btn-gold" onclick="goToEmailScreen()">
+      ✉️ Solicitar factura
+    </button>
+    <button class="btn-action btn-outline" onclick="saveAsExpenseOnly()">
+      💾 Guardar solo como gasto
+    </button>
+    <button class="btn-action btn-ghost" onclick="goToScreen('screen-capture')">
+      ↩ Repetir captura
+    </button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SCREEN 4 — EMAIL REQUEST
+══════════════════════════════════════════ -->
+<div class="screen" id="screen-email">
+  <div class="email-header">
+    <div class="email-header-icon">✉️</div>
+    <div class="email-header-title">Solicitar factura</div>
+    <div class="email-header-sub">
+      He redactado el email con referencia al RD 1619/2012.
+      Revisa, añade el email del comercio y envía.
+    </div>
+  </div>
+
+  <div class="email-field">
+    <label>Email del comercio</label>
+    <input type="email" id="vendor-email" class="email-input"
+           placeholder="info@restaurante.com"
+           oninput="updateSendButton()">
+    <div style="font-size:11px;color:var(--muted);margin-top:4px;">
+      Búscalo en su web, Google Maps o pídelo en caja
+    </div>
+  </div>
+
+  <div class="email-preview">
+    <div class="email-preview-label">Vista previa del email</div>
+    <div class="email-preview-subject" id="email-subject">—</div>
+    <div class="email-preview-body" id="email-body">—</div>
+  </div>
+
+  <div class="email-actions">
+    <button class="btn-action btn-gold" id="btn-send" onclick="sendEmail()" disabled
+            style="opacity:0.5;transition:opacity 0.2s;">
+      📤 Enviar solicitud
+    </button>
+    <button class="btn-action btn-outline" onclick="copyEmailToClipboard()">
+      📋 Copiar email
+    </button>
+    <button class="btn-action btn-outline" id="btn-mailto" onclick="openMailto()">
+      📱 Abrir en app de correo
+    </button>
+    <button class="btn-action btn-ghost" onclick="goToScreen('screen-result')">
+      ← Volver
+    </button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SCREEN 5 — SUCCESS
+══════════════════════════════════════════ -->
+<div class="screen" id="screen-success">
+  <div class="success-icon">✅</div>
+  <div class="success-title">¡Listo!</div>
+  <p class="success-sub" id="success-sub">Ticket guardado. Recibirás la factura por email cuando el comercio la envíe.</p>
+
+  <div class="success-details" id="success-details"></div>
+
+  <button class="btn-action btn-gold" onclick="captureAnother()" style="max-width:300px;">
+    📷 Capturar otro ticket
+  </button>
+  <a href="/" class="btn-action btn-ghost" style="max-width:300px;">
+    Ver todos los tickets →
+  </a>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+let currentTicketId  = null;
+let currentTicketData = null;
+let cameraStream     = null;
+
+// ── Screen navigation ──────────────────────────────────────────────────────────
+function goToScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+// ── Camera ─────────────────────────────────────────────────────────────────────
+async function activateCamera() {
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 960 } }
+    });
+    const video = document.getElementById('camera-video');
+    video.srcObject = cameraStream;
+    document.getElementById('vf-placeholder').style.display = 'none';
+    video.style.display = 'block';
+
+    // Replace button with capture shutter
+    const btn = document.getElementById('btn-camera');
+    btn.innerHTML = '<span class="btn-icon">⚡</span> Capturar ahora';
+    btn.onclick = captureFromCamera;
+  } catch(e) {
+    // Camera not available — fallback to file picker
+    document.getElementById('file-input').click();
+  }
+}
+
+function captureFromCamera() {
+  const video  = document.getElementById('camera-video');
+  const canvas = document.createElement('canvas');
+  canvas.width  = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+
+  canvas.toBlob(blob => {
+    stopCamera();
+    processImage(blob, 'ticket_camera.jpg');
+  }, 'image/jpeg', 0.88);
+}
+
+function stopCamera() {
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(t => t.stop());
+    cameraStream = null;
+  }
+}
+
+function handleFileSelect(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  // Show preview
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = document.getElementById('preview-img');
+    img.src = e.target.result;
+    img.style.display = 'block';
+    document.getElementById('camera-video').style.display = 'none';
+    document.getElementById('vf-placeholder').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+
+  processImage(file, file.name);
+}
+
+// ── Process image ──────────────────────────────────────────────────────────────
+async function processImage(blob, filename) {
+  goToScreen('screen-processing');
+
+  // Step 1: upload
+  markStep('step-upload', 'active');
+
+  const fd = new FormData();
+  fd.append('file', blob, filename);
+
+  let ticketId;
+  try {
+    const res  = await fetch('/api/tickets/capture', { method: 'POST', body: fd });
+    const data = await res.json();
+
+    if (!res.ok) throw new Error(data.detail || 'Error al subir');
+    ticketId = data.ticket_id;
+    markStep('step-upload', 'done');
+  } catch(e) {
+    showToast('Error al subir la imagen: ' + e.message, 'error');
+    goToScreen('screen-capture');
+    return;
+  }
+
+  // Step 2: poll until done
+  markStep('step-extract', 'active');
+
+  let ticket;
+  for (let i = 0; i < 30; i++) {
+    await sleep(1000);
+    const res   = await fetch(`/api/tickets/${ticketId}`);
+    const data  = await res.json();
+    if (data.status !== 'processing' && data.status !== 'pending_invoice' || data.vendor_name) {
+      ticket = data;
+      break;
+    }
+  }
+
+  if (!ticket) {
+    showToast('Timeout — intenta de nuevo', 'error');
+    goToScreen('screen-capture');
+    return;
+  }
+
+  markStep('step-extract', 'done');
+  markStep('step-email', 'active');
+
+  // Step 3: email already generated server-side
+  await sleep(600);
+  markStep('step-email', 'done');
+  await sleep(400);
+
+  currentTicketId   = ticketId;
+  currentTicketData = ticket;
+
+  populateResult(ticket);
+  goToScreen('screen-result');
+}
+
+// ── Populate result screen ─────────────────────────────────────────────────────
+function populateResult(t) {
+  document.getElementById('r-vendor').textContent   = t.vendor_name   || 'Comercio desconocido';
+  document.getElementById('r-date').textContent     = t.ticket_date   || '—';
+  document.getElementById('r-concept').textContent  = t.concept       || '—';
+  document.getElementById('r-category').textContent = t.category      || '—';
+  document.getElementById('r-nif').textContent      = t.vendor_nif    || 'No encontrado';
+
+  if (t.total)    document.getElementById('r-total').textContent    = `${t.total.toFixed(2)} €`;
+  if (t.tax_rate) document.getElementById('r-tax').textContent      = `IVA ${(t.tax_rate*100).toFixed(0)}%`;
+  if (t.subtotal) document.getElementById('r-subtotal').textContent = `${t.subtotal.toFixed(2)} €`;
+
+  const pct  = Math.round((t.confidence || 0) * 100);
+  const color= pct >= 80 ? 'var(--green)' : pct >= 50 ? 'var(--gold)' : 'var(--red)';
+  document.getElementById('conf-fill').style.width      = pct + '%';
+  document.getElementById('conf-fill').style.background = color;
+  document.getElementById('conf-pct').textContent       = pct + '%';
+  document.getElementById('conf-pct').style.color       = color;
+
+  // Pre-fill email screen
+  document.getElementById('email-subject').textContent = t.request_email_subject || '—';
+  document.getElementById('email-body').textContent    = t.request_email_body    || '—';
+}
+
+// ── Email screen ───────────────────────────────────────────────────────────────
+function goToEmailScreen() {
+  goToScreen('screen-email');
+}
+
+function updateSendButton() {
+  const email = document.getElementById('vendor-email').value.trim();
+  const btn   = document.getElementById('btn-send');
+  const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  btn.disabled = !valid;
+  btn.style.opacity = valid ? '1' : '0.5';
+}
+
+async function sendEmail() {
+  const to      = document.getElementById('vendor-email').value.trim();
+  const subject = document.getElementById('email-subject').textContent;
+  const body    = document.getElementById('email-body').textContent;
+
+  if (!to) return;
+
+  const btn = document.getElementById('btn-send');
+  btn.textContent = '⏳ Enviando…';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(`/api/tickets/${currentTicketId}/send-request`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to, subject, body }),
+    });
+
+    if (res.ok) {
+      showSuccessScreen(true);
+    } else {
+      const d = await res.json();
+      showToast(d.detail || 'Error al enviar', 'error');
+      btn.textContent = '📤 Enviar solicitud';
+      btn.disabled = false;
+    }
+  } catch(e) {
+    showToast('Error de red', 'error');
+    btn.textContent = '📤 Enviar solicitud';
+    btn.disabled = false;
+  }
+}
+
+function copyEmailToClipboard() {
+  const subject = document.getElementById('email-subject').textContent;
+  const body    = document.getElementById('email-body').textContent;
+  const text    = `Asunto: ${subject}\n\n${body}`;
+  navigator.clipboard.writeText(text).then(() => showToast('Email copiado ✓', 'success'));
+}
+
+function openMailto() {
+  const to      = document.getElementById('vendor-email').value.trim();
+  const subject = encodeURIComponent(document.getElementById('email-subject').textContent);
+  const body    = encodeURIComponent(document.getElementById('email-body').textContent);
+  window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
+  // After opening mail app, save as sent
+  setTimeout(() => saveAsEmailSent(to), 2000);
+}
+
+async function saveAsEmailSent(to) {
+  await fetch(`/api/tickets/${currentTicketId}/send-request`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      to,
+      subject: document.getElementById('email-subject').textContent,
+      body:    document.getElementById('email-body').textContent,
+      via_mailto: true,
+    }),
+  });
+  showSuccessScreen(true);
+}
+
+// ── Save as expense only ───────────────────────────────────────────────────────
+async function saveAsExpenseOnly() {
+  await fetch(`/api/tickets/${currentTicketId}/expense-only`, { method: 'POST' });
+  showSuccessScreen(false);
+}
+
+// ── Success ────────────────────────────────────────────────────────────────────
+function showSuccessScreen(emailSent) {
+  const t = currentTicketData;
+  document.getElementById('success-sub').textContent = emailSent
+    ? 'Solicitud enviada. Cuando el comercio responda, la factura aparecerá en tu dashboard.'
+    : 'Ticket guardado como gasto. Puedes solicitar la factura más tarde.';
+
+  const details = document.getElementById('success-details');
+  details.innerHTML = [
+    ['Comercio', t.vendor_name || '—'],
+    ['Importe',  t.total ? `${t.total.toFixed(2)} €` : '—'],
+    ['Categoría',t.category || '—'],
+    ['Estado',   emailSent ? '✉️ Solicitud enviada' : '💾 Guardado'],
+  ].map(([k,v]) => `
+    <div class="success-detail-row">
+      <span class="sdk">${k}</span>
+      <span class="sdv">${v}</span>
+    </div>
+  `).join('');
+
+  goToScreen('screen-success');
+}
+
+function captureAnother() {
+  currentTicketId   = null;
+  currentTicketData = null;
+  document.getElementById('preview-img').style.display = 'none';
+  document.getElementById('vf-placeholder').style.display = 'flex';
+  document.getElementById('file-input').value = '';
+  goToScreen('screen-capture');
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+function markStep(id, state) {
+  const el    = document.getElementById(id);
+  const check = el.querySelector('.step-check');
+  el.className = 'processing-step ' + state;
+  check.textContent = state === 'done' ? '✓' : state === 'active' ? '⏳' : '○';
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className   = `toast ${type} show`;
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// Stop camera when leaving page
+window.addEventListener('pagehide', stopCamera);
+</script>
+</body>
+</html>
