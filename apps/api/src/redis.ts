@@ -1,9 +1,11 @@
 import { Redis } from 'ioredis'
 import { env } from './config.js'
 
+// maxRetriesPerRequest must be null for BullMQ workers
 export const redis = new Redis(env.REDIS_URL, {
-  maxRetriesPerRequest: 3,
+  maxRetriesPerRequest: null,
   lazyConnect: true,
+  enableReadyCheck: false,
 })
 
 redis.on('error', (err) => {
