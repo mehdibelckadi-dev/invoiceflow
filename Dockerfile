@@ -32,12 +32,11 @@ RUN pnpm --filter @lefse/shared build
 RUN pnpm --filter @lefse/api build
 RUN pnpm --filter @lefse/web build
 
+COPY start.sh /app/start.sh
+RUN chmod +x /app/start.sh
+
 EXPOSE 3001
 EXPOSE 3000
 
 # SERVICE=api (default) or SERVICE=web
-CMD sh -c 'if [ "$SERVICE" = "web" ]; then \
-  cd /app/apps/web && node_modules/.bin/next start -p 3000; \
-  else \
-  node /app/apps/api/dist/index.js; \
-  fi'
+CMD ["/app/start.sh"]
