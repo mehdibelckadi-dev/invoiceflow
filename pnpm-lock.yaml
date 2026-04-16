@@ -90,9 +90,6 @@ importers:
 
   apps/web:
     dependencies:
-      '@lefse/shared':
-        specifier: workspace:*
-        version: link:../../packages/shared
       date-fns:
         specifier: ^3.6.0
         version: 3.6.0
