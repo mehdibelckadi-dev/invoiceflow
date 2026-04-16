@@ -1,6 +1,8 @@
 'use client'
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
+const BASE_URL = typeof window !== 'undefined'
+  ? '/api'
+  : (process.env.API_URL ?? 'http://localhost:3001')
 
 function getToken(): string | null {
   if (typeof window === 'undefined') return null
@@ -208,7 +210,7 @@ export const aiApi = {
   // Returns EventSource-compatible URL (caller sets token header manually)
   chatStream: async function* (message: string, conversationId?: string): AsyncGenerator<string> {
     const token = getToken()
-    const res = await fetch(`${BASE_URL}/ai/chat`, {
+    const res = await fetch(`/api/ai/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
