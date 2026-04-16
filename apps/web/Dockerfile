@@ -1,4 +1,3 @@
-ARG CACHE_BUST=1
 FROM node:22-alpine
 
 WORKDIR /app
@@ -8,6 +7,8 @@ COPY package.json ./
 RUN npm install
 
 COPY . .
+
+RUN find . -name "*.tsbuildinfo" -delete
 
 RUN npm run build
 
