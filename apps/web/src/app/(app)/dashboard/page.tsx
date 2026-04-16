@@ -40,9 +40,9 @@ export default function DashboardPage() {
       {/* Plan + usage cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
         <StatCard label="Plan" value={sub.planName ?? 'FREE'} color={planColor} />
-        <StatCard label="Facturas" value={`${usage.invoicesCount ?? 0} / ${sub.invoiceLimit === -1 ? '∞' : sub.invoiceLimit}`} />
-        <StatCard label="OCR" value={`${usage.ocrCount ?? 0} / ${sub.ocrLimit === -1 ? '∞' : sub.ocrLimit}`} />
-        <StatCard label="Asistente IA" value={`${usage.aiQueriesCount ?? 0} / ${sub.aiDailyLimit === -1 ? '∞' : sub.aiDailyLimit}`} />
+        <StatCard label="Facturas" value={`${usage.invoicesCount ?? 0} / ${sub.invoiceLimit == null || sub.invoiceLimit === -1 ? '∞' : sub.invoiceLimit}`} />
+        <StatCard label="OCR" value={`${usage.ocrCount ?? 0} / ${sub.ocrLimit == null || sub.ocrLimit === -1 ? '∞' : sub.ocrLimit}`} />
+        <StatCard label="Asistente IA" value={`${usage.aiQueriesCount ?? 0} / ${sub.aiDailyLimit == null || sub.aiDailyLimit === -1 ? '∞' : sub.aiDailyLimit}`} />
       </div>
 
       {/* Recent invoices */}
