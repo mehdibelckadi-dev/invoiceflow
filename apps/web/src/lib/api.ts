@@ -1,8 +1,6 @@
 'use client'
 
-const BASE_URL = typeof window !== 'undefined'
-  ? '/api'
-  : (process.env.API_URL ?? 'http://localhost:3001')
+const BASE_URL = '/api'
 
 function getToken(): string | null {
   if (typeof window === 'undefined') return null
