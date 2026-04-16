@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: `${process.env.API_URL || 'http://localhost:3001'}/:path*`,
+        destination: `${process.env.API_URL || 'https://lefse-production.up.railway.app'}/:path*`,
       },
     ]
   },
